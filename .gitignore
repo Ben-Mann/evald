@@ -1,0 +1,10 @@
+.DS_Store
+RemoteSystemsTempFiles/
+.metadata/
+.settings/
+.recommenders/
+bin/
+.ivy/
+junit/
+*.jar
+.javadoc

@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<project basedir="." default="test" name="evald" xmlns:ivy="antlib.org.apache.ivy.ant">
+    <property environment="env"/>
+    <property name="junit.output.dir" value="junit"/>
+    <property name="debuglevel" value="source,lines,vars"/>
+    <property name="target" value="1.7"/>
+    <property name="source" value="1.7"/>
+	<property name="ivy.install.version" value="2.4.0" />
+	<property name="ivy.jar.file" value="ivy-${ivy.install.version}" />
+	<property name="ivy.jar.dir" value=".ivy" />
+	<property name="ivy.retrieve.pattern" value=".ivy/lib" />
+
+    <path id="evald.classpath">
+        <pathelement location="bin"/>
+    </path>
+	
+	<!-- http://codedependents.com/2008/11/11/pimpin-your-ant-build-with-ivy/ -->
+    <target name="checkfiles" description="checks if files have already been downloaded">
+        <available file="${ivy.jar.dir}/${ivy.jar.file}" property="ivy.exists" />
+    	<echo message="ivy exists = ${ivy.exists}" />
+    </target>
+              	
+    <target name="dl-ivy" description="download ivy" depends="checkfiles" unless="ivy.exists">
+		<mkdir dir="${ivy.jar.dir}"/>
+    	<echo message="downloading ivy to ${ivy.jar.dir}" />
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar" dest="${ivy.jar.dir}/${ivy.jar.file}" usetimestamp="true"/>
+    </target>
+              	
+    <target name="ivy" depends="dl-ivy" description="configure ivy" >
+    	<path id="ivy.lib.path">
+            <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+        </path>
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib.org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+        <ivy:settings file="ivysettings.xml" />
+    	<ivy:retrieve />
+
+        <ivy:cachepath pathid="build.path" conf="build" />
+        <ivy:cachepath pathid="test.path" conf="test" />
+    </target>
+        	
+	<target name="resolve">
+    	<path id="ivy.lib.path">
+            <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
+        </path>
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+		<ivy:settings file="ivysettings.xml" />
+    	<ivy:retrieve />
+        <ivy:cachepath pathid="build.path" conf="build" />
+        <ivy:cachepath pathid="test.path" conf="test" />
+	</target>
+    	
+    <target name="init">
+        <mkdir dir="bin"/>
+        <copy includeemptydirs="false" todir="bin">
+            <fileset dir="src">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+        <copy includeemptydirs="false" todir="bin">
+            <fileset dir="test">
+                <exclude name="**/*.java"/>
+            </fileset>
+        </copy>
+    </target>
+    	
+    <target name="clean">
+        <delete dir="bin"/>
+    </target>
+    	
+    <target depends="clean" name="cleanall"/>
+
+	<target name="build-javadoc">
+		<javadoc packagenames="net.benmann.*"
+			sourcepath="src"
+			defaultexcludes="yes"
+			destdir=".javadoc">
+			<doctitle><![CDATA[<h1>evald</h1>]]></doctitle>
+		</javadoc>
+		<jar basedir=".javadoc" destfile="evald-1.0-javadoc.jar"/>
+	</target>
+    	
+	<target name="build-sources">
+    	<jar basedir="src" destfile="evald-1.0-sources.jar"/>
+	</target>
+    	
+    <target depends="build-project" name="build-jar">
+		<jar destfile="evald-1.0.jar" basedir="bin">
+			<manifest>
+			</manifest>
+		</jar>
+	</target>
+
+    <target depends="build-jar,build-javadoc,build-sources" name="build-all">
+		<jar destfile="evald-1.0.jar" basedir="bin">
+			<manifest>
+			</manifest>
+		</jar>
+	</target>
+
+    <target depends="init" name="build-project">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
+            <src path="src"/>
+            <classpath refid="evald.classpath"/>
+        </javac>
+    </target>
+
+    <target depends="build-project" name="build-test">
+        <echo message="${ant.project.name}: ${ant.file}"/>
+        <javac debug="true" debuglevel="${debuglevel}" destdir="bin" includeantruntime="false" source="${source}" target="${target}">
+            <src path="test"/>
+	    	<classpath>
+	  	        <path refid="test.path"/>
+	  	        <path refid="evald.classpath"/>
+    	    </classpath>
+        </javac>
+    </target>
+            	
+  	<target name="test" depends="ivy, build-test">
+  	    <mkdir dir="${junit.output.dir}"/>
+  	    <junit printsummary="yes" haltonfailure="yes">
+  	      <classpath>
+	        <path refid="test.path"/>
+	        <path refid="evald.classpath"/>
+  	      </classpath>
+
+  	      <formatter type="plain"/>
+  	      <formatter type="xml"/>
+
+  	      <batchtest fork="yes" todir="${junit.output.dir}">
+  	        <fileset dir="test">
+  	          <include name="**/*Tests.java"/>
+  	        </fileset>
+  	      </batchtest>
+
+  	    </junit>
+  	</target>
+    	
+    <target name="junitreport">
+        <junitreport todir="${junit.output.dir}">
+            <fileset dir="${junit.output.dir}">
+                <include name="TEST-*.xml"/>
+            </fileset>
+            <report format="frames" todir="${junit.output.dir}"/>
+        </junitreport>
+    </target>
+</project>

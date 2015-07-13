@@ -1,36 +1,62 @@
 <?xml version="1.0" encoding="UTF-8" standalone="no"?>
-<project basedir="." default="test" name="evald" xmlns:ivy="antlib.org.apache.ivy.ant">
+<project basedir="." default="test" name="evald" xmlns:ivy="antlib:org.apache.ivy.ant">
     <property environment="env"/>
     <property name="junit.output.dir" value="junit"/>
     <property name="debuglevel" value="source,lines,vars"/>
     <property name="target" value="1.7"/>
     <property name="source" value="1.7"/>
 	<property name="ivy.install.version" value="2.4.0" />
-	<property name="ivy.jar.file" value="ivy-${ivy.install.version}" />
-	<property name="ivy.jar.dir" value=".ivy" />
-	<property name="ivy.retrieve.pattern" value=".ivy/lib" />
+	<condition property="ivy.home" value="${env.IVY_HOME}">
+		<isset property="env.IVY_HOME" />
+	</condition>
+	<property name="ivy.home" value="${user.home}/.ant" />
+	<property name="ivy.jar.dir" value="${ivy.home}/lib" />
+	<property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar" />
+	
+	<available file=".git" type="dir" property="git-available" />
+	
+	<target name="git-revision" if="git-available">
+		<exec executable="git" outputproperty="git-revision" failifexecutionfails="false" errorproperty="">
+			<arg value="describe"/>
+			<arg value="--tags"/>
+			<arg value="--always"/>
+			<arg value="HEAD"/>
+		</exec>
+		<tstamp>
+			<format property="timestamp" pattern="yyyyMMddHHmm"/>
+		</tstamp>
+		<condition property="git-version" value="${git-revision}" else="${timestamp}">
+			<and>
+				<isset property="git-revision"/>
+				<length string="${git-revision}" trim="yes" length="0" when="greater"/>
+				<not>
+					<contains string="${git-revision}" substring="-"/>
+				</not>
+				<contains string="${git-revision}" substring="v"/>
+			</and>
+		</condition>
+	</target>
 
     <path id="evald.classpath">
         <pathelement location="bin"/>
     </path>
 	
-	<!-- http://codedependents.com/2008/11/11/pimpin-your-ant-build-with-ivy/ -->
     <target name="checkfiles" description="checks if files have already been downloaded">
-        <available file="${ivy.jar.dir}/${ivy.jar.file}" property="ivy.exists" />
+        <available file="${ivy.jar.file}" property="ivy.exists" />
     	<echo message="ivy exists = ${ivy.exists}" />
     </target>
               	
-    <target name="dl-ivy" description="download ivy" depends="checkfiles" unless="ivy.exists">
+    <target name="dl-ivy" depends="checkfiles" unless="ivy.exists, offline">
 		<mkdir dir="${ivy.jar.dir}"/>
     	<echo message="downloading ivy to ${ivy.jar.dir}" />
-        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar" dest="${ivy.jar.dir}/${ivy.jar.file}" usetimestamp="true"/>
+        <get src="http://repo1.maven.org/maven2/org/apache/ivy/ivy/${ivy.install.version}/ivy-${ivy.install.version}.jar" dest="${ivy.jar.file}" usetimestamp="true"/>
     </target>
               	
-    <target name="ivy" depends="dl-ivy" description="configure ivy" >
+    <target name="ivy" depends="dl-ivy" >
     	<path id="ivy.lib.path">
             <fileset dir="${ivy.jar.dir}" includes="*.jar"/>
         </path>
-        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib.org.apache.ivy.ant" classpathref="ivy.lib.path"/>
+        <taskdef resource="org/apache/ivy/ant/antlib.xml" uri="antlib:org.apache.ivy.ant" classpathref="ivy.lib.path"/>
         <ivy:settings file="ivysettings.xml" />
     	<ivy:retrieve />
 
@@ -69,33 +95,28 @@
     	
     <target depends="clean" name="cleanall"/>
 
-	<target name="build-javadoc">
+	<target name="build-javadoc" depends="git-revision">
 		<javadoc packagenames="net.benmann.*"
 			sourcepath="src"
 			defaultexcludes="yes"
 			destdir=".javadoc">
 			<doctitle><![CDATA[<h1>evald</h1>]]></doctitle>
 		</javadoc>
-		<jar basedir=".javadoc" destfile="evald-1.0-javadoc.jar"/>
+		<jar basedir=".javadoc" destfile="evald-${git-version}-javadoc.jar"/>
 	</target>
     	
 	<target name="build-sources">
-    	<jar basedir="src" destfile="evald-1.0-sources.jar"/>
+    	<jar basedir="src" destfile="evald-${git-version}-sources.jar"/>
 	</target>
     	
-    <target depends="build-project" name="build-jar">
-		<jar destfile="evald-1.0.jar" basedir="bin">
+    <target depends="build-project,git-revision" name="build-jar">
+		<jar destfile="evald-${git-version}.jar" basedir="bin">
 			<manifest>
 			</manifest>
 		</jar>
 	</target>
 
-    <target depends="build-jar,build-javadoc,build-sources" name="build-all">
-		<jar destfile="evald-1.0.jar" basedir="bin">
-			<manifest>
-			</manifest>
-		</jar>
-	</target>
+    <target depends="build-jar,build-javadoc,build-sources" name="build-all" />
 
     <target depends="init" name="build-project">
         <echo message="${ant.project.name}: ${ant.file}"/>

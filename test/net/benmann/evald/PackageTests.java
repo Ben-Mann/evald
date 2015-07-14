@@ -74,7 +74,7 @@ public class PackageTests {
         PostfixOperatorParser parser = new PostfixOperatorParser("!") {
             @Override public PostfixOperatorNode create() {
                 return new PostfixOperatorNode(token) {
-                    @Override protected Double get() {
+                    @Override protected double get() {
                         return getFactorial(b.get());
                     }
                 };
@@ -109,14 +109,14 @@ public class PackageTests {
     @Test public void testParserList() {
         Evald evald = new Evald();
         evald.addUserFunction(new OneArgFunction("foobar") {
-            @Override protected Double get(Double value) {
+            @Override protected double get(double value) {
                 return value * 2;
             }
         });
         evald.addParser(new BinaryOperatorParser("ping") {
             @Override public BinaryOperatorNode create() {
                 return new BinaryOperatorNode(token, Precedence.ADDITIVE) {
-                    @Override protected Double get() {
+                    @Override protected double get() {
                         return 100 * (a.get() + b.get());
                     }
                 };
@@ -125,7 +125,7 @@ public class PackageTests {
         evald.addParser(new BinaryOperatorParser("pingpong") {
             @Override public BinaryOperatorNode create() {
                 return new BinaryOperatorNode(token, Precedence.MULTIPLICATIVE) {
-                    @Override protected Double get() {
+                    @Override protected double get() {
                         return -(a.get() + b.get());
                     }
                 };

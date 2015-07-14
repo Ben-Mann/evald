@@ -1,21 +1,27 @@
 package net.benmann.evald;
 
-import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class Variable extends ValueNode {
     final int index;
-    final List<Double> values;	//FIXME for slightly better performance we could use a double[] array directly.
+    double[] values;
 
+    //how about: when we do parse(), we allocate the evald valuelist, because we know which variables
+    //are used in THIS expression, and can pre-allocate them. Then, after the allocation
     Variable(Evald evald, int index) {
         super(false);
-        values = evald.valueList;
+        evald.addValueArrayCallback(new SetValueArrayCallback() {
+            @Override void setValueArray(double[] valueArray) {
+                values = valueArray;
+            }
+        });
+        evald.addUsedIndex(index);
         this.index = index;
     }
 
-    @Override protected Double get() {
-        return values.get(index);
+    @Override protected double get() {
+        return values[index];
     }
 
     @Override protected Node collapse() {

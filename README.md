@@ -2,7 +2,7 @@
 
 Evaluator-Double
 
-A simple Java expression parser and evaluator for numeric expressions using Doubles. 
+A simple Java expression parser and evaluator for numeric expressions using doubles. 
 Lightweight, small footprint for fast parsing and rapid evaluation of numeric expressions.
 
 ## Usage
@@ -88,7 +88,7 @@ The core library (LibArithmetic) provides the following basic expression functio
 ####Core functionality
 
 * Braces
-* Constant values
+* Constant values (numeric values in expressions)
 * ```nan``` for NaN
 
 ### Logic
@@ -128,7 +128,6 @@ The library adds the following constants:
 
 * ```isnan(v)``` nonzero if v is nan 
 * ```isinf(v)``` nonzero if v is +infinity or -infinity
-* ```isnull(v)``` nonzero if v is null*
 
 ### Binary
 
@@ -138,7 +137,7 @@ The binary library (LibBinary) provides support for the following bitwise operat
 * ```~``` one's complement
 * ```&``` binary AND
 * ```|``` binary OR
-* ```xor``` binary XOR**
+* ```xor``` binary XOR*
 
 ### Math
 
@@ -174,6 +173,12 @@ The math library (LibMath) provides functions and constants as follows:
 * ```atan(a)``` returns the arc tangent of ```a```
 * ```atan2(y,x)``` returns the angle _theta_ from conversion of rectangular (```x```,```y```) to the polar (r,_theta_)
 * ```sin(a)``` return the trignometric sine of ```a```
+* ```atanh(a)```
+* ```acosh(a)```
+* ```asinh(a)```
+* ```cot(a)```
+* ```cosec(a)```
+* ```sec(a)```
 
 ## Extensibility
 
@@ -240,9 +245,21 @@ Additional overloads allow for multiple arguments (TwoArgFunction, ThreeArgFunct
 
 Adding a function always removes a previous function using the same token from the parser, but any already parsed expression will continue to use the previously added function. 
 
+Note that as well as supporting varargs, you can use NArgFunction with argument constraints to create a function with an arbitrary min & max number of arguments.
+
 ### Remove Functions
 Individual functions can be removed using ```Evald.removeFunction()```. 
 Removing a function always removes any previous function using the same token from the parser, but any already parsed expression will continue to use the previously added function.
+
+### Enumerate Variables
+Variables in use by an Evald instance can be enumerated:
+
+* ```listUndeclared()``` lists any variable names referenced by the expression which have not yet been added with ```addVariable()```.
+* ```listAllVariables()``` lists all variables - undeclared variables, as well as those added with calls to ```addVariable()```
+* ```listActiveVariables()``` lists variables used by the most recently parsed expression.
+
+Note that undeclared variable behaviour is controlled with ```setAllowUndeclared```; if undeclared variables are disallowed an exception will be raised when parsing.
+
 
 ### Extending Constants and Operators
 At this time, these cannot be modified.
@@ -258,7 +275,5 @@ MIT. See LICENSE.md
 
 ## Footnotes
 
-\* null support may be dropped from future releases, eliminating unboxing/boxing overheads.
-
-\** ```^``` is reserved for the power operator. 
+\* ```^``` is reserved for the power operator. 
 

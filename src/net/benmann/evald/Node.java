@@ -9,7 +9,7 @@ abstract class Node {
      * 
      * @return the result of evaluating this tree node.
      */
-    protected abstract Double get();
+    protected abstract double get();
 
     Node(boolean isConstant) {
         this.isConstant = isConstant;

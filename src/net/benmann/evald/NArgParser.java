@@ -6,7 +6,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class NArgParser extends ValueParser {
-    static final int NO_MAX = -1;
 	final Pattern pattern;
 	final int minArguments;
 	final int maxArguments;

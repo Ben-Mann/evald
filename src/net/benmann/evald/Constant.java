@@ -1,14 +1,14 @@
 package net.benmann.evald;
 
 class Constant extends ValueNode {
-    final Double value;
+    final double value;
 
-    Constant(Double value) {
+    Constant(double value) {
         super(true);
         this.value = value;
     }
 
-    @Override protected Double get() {
+    @Override protected double get() {
         return value;
     }
 

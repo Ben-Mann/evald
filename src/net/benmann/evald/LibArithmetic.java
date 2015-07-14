@@ -11,7 +11,7 @@ import java.util.regex.Pattern;
  *  braces: ( )
  *  constants: nan
  */
-class LibArithmetic extends Library {
+public final class LibArithmetic extends Library {
     @Override Parser[] getParsers() {
         return new Parser[] { CONSTANT, NaN, MOD, ADD, SUBTRACT, MULTIPLY, DIVIDE, POSITIVE, NEGATIVE, POW, BRACES };
     }
@@ -25,7 +25,7 @@ class LibArithmetic extends Library {
     public static final BinaryOperatorParser ADD = new BinaryOperatorParser("+") {
         @Override protected BinaryOperatorNode create() {
             return new BinaryOperatorNode(token, Precedence.ADDITIVE) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return a.get() + b.get();
                 }
 
@@ -42,8 +42,8 @@ class LibArithmetic extends Library {
                     Node constantNode = a.isConstant ? a : b;
                     Node variableNode = a.isConstant ? b : a;
 
-                    Double value = constantNode.get();
-                    if (value.doubleValue() == 0)
+                    double value = constantNode.get();
+                    if (value == 0)
                         return variableNode;
 
                     return this;
@@ -56,7 +56,7 @@ class LibArithmetic extends Library {
     public static final BinaryOperatorParser MOD = new BinaryOperatorParser("%") {
         @Override protected BinaryOperatorNode create() {
             return new BinaryOperatorNode(token, Precedence.MULTIPLICATIVE) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return a.get() % b.get();
                 }
 
@@ -70,7 +70,7 @@ class LibArithmetic extends Library {
                     if (a.isConstant && b.isConstant)
                         return new Constant(get());
 
-                    if (a.isConstant && a.get().doubleValue() == 0)
+                    if (a.isConstant && a.get() == 0)
                         return new Constant(0.0);
 
                     return this;
@@ -83,7 +83,7 @@ class LibArithmetic extends Library {
     public static final BinaryOperatorParser POW = new BinaryOperatorParser("^") {
         @Override protected BinaryOperatorNode create() {
             return new BinaryOperatorNode(token, Precedence.POWER) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return Math.pow(a.get(), b.get());
                 }
                 
@@ -100,10 +100,10 @@ class LibArithmetic extends Library {
                     if (!b.isConstant)
                         return this;
                     
-                    if (b.get().doubleValue() == 0)
+                    if (b.get() == 0)
                         return new Constant(1.0);
                     
-                    if (b.get().doubleValue() == 1)
+                    if (b.get() == 1)
                         return a;
 
                     return this;
@@ -116,7 +116,7 @@ class LibArithmetic extends Library {
     public static final BinaryOperatorParser SUBTRACT = new BinaryOperatorParser("-") {
         @Override protected BinaryOperatorNode create() {
             return new BinaryOperatorNode(token, Precedence.ADDITIVE) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return a.get() - b.get();
                 }
 
@@ -133,8 +133,8 @@ class LibArithmetic extends Library {
                     Node constantNode = a.isConstant ? a : b;
                     Node variableNode = a.isConstant ? b : a;
 
-                    Double value = constantNode.get();
-                    if (value.doubleValue() == 0)
+                    double value = constantNode.get();
+                    if (value == 0)
                         return variableNode;
 
                     return this;
@@ -147,7 +147,7 @@ class LibArithmetic extends Library {
     public static final BinaryOperatorParser MULTIPLY = new BinaryOperatorParser("*") {
         @Override protected BinaryOperatorNode create() {
             return new BinaryOperatorNode(token, Precedence.MULTIPLICATIVE) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return a.get() * b.get();
                 }
 
@@ -164,10 +164,10 @@ class LibArithmetic extends Library {
                     Node constantNode = a.isConstant ? a : b;
                     Node variableNode = a.isConstant ? b : a;
 
-                    Double value = constantNode.get();
-                    if (value.doubleValue() == 0)
+                    double value = constantNode.get();
+                    if (value == 0)
                         return new Constant(0.0);
-                    if (value.doubleValue() == 1)
+                    if (value == 1)
                         return variableNode;
 
                     return this;
@@ -179,7 +179,7 @@ class LibArithmetic extends Library {
     public static final BinaryOperatorParser DIVIDE = new BinaryOperatorParser("/") {
         @Override protected BinaryOperatorNode create() {
             return new BinaryOperatorNode(token, Precedence.MULTIPLICATIVE) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return a.get() / b.get();
                 }
 
@@ -193,10 +193,10 @@ class LibArithmetic extends Library {
                     if (a.isConstant && b.isConstant)
                         return new Constant(get());
 
-                    if (a.isConstant && a.get().doubleValue() == 0)
+                    if (a.isConstant && a.get() == 0)
                         return new Constant(0.0);
 
-                    if (b.isConstant && b.get().doubleValue() == 1)
+                    if (b.isConstant && b.get() == 1)
                         return a;
 
                     return this;
@@ -209,7 +209,7 @@ class LibArithmetic extends Library {
     public static final PrefixOperatorParser POSITIVE = new PrefixOperatorParser("+") {
         @Override protected PrefixOperatorNode create() {
             return new PrefixOperatorNode(token) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return b.get();
                 }
 
@@ -223,7 +223,7 @@ class LibArithmetic extends Library {
     public static final PrefixOperatorParser NEGATIVE = new PrefixOperatorParser("-") {
         @Override protected PrefixOperatorNode create() {
             return new PrefixOperatorNode(token) {
-                @Override protected Double get() {
+                @Override protected double get() {
                     return -b.get();
                 }
             };

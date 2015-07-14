@@ -2,8 +2,8 @@ package net.benmann.evald.test;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -108,7 +108,7 @@ public class PublicAPITests {
     @Test public void testOneArgFunction() {
         Evald evald = new Evald();
         evald.addUserFunction(new OneArgFunction("foo") {
-            @Override public Double get(Double value) {
+            @Override public double get(double value) {
                 return value + 2;
             }
         });
@@ -127,12 +127,12 @@ public class PublicAPITests {
     @Test public void testCaseSensitivity() {
         Evald evald = new Evald();
         evald.addUserFunction(new OneArgFunction("foo") {
-            @Override public Double get(Double value) {
+            @Override public double get(double value) {
                 return value / 3;
             }
         });
         evald.addUserFunction(new OneArgFunction("Foo") {
-            @Override public Double get(Double value) {
+            @Override public double get(double value) {
                 return value * 11;
             }
         });
@@ -144,9 +144,9 @@ public class PublicAPITests {
     @Test public void testNArgFunction() {
         Evald evald = new Evald();
         evald.addUserFunction(new NArgFunction("sum") {
-            @Override public Double get(Double... values) {
-                Double sum = 0.0;
-                for (Double value : values) {
+            @Override public double get(double... values) {
+                double sum = 0.0;
+                for (double value : values) {
                     sum += value;
                 }
                 return sum;
@@ -165,7 +165,7 @@ public class PublicAPITests {
     @Test public void testTwoArgFunction() {
         Evald evald = new Evald();
         evald.addUserFunction(new TwoArgFunction("bar") {
-            @Override public Double get(Double arg1, Double arg2) {
+            @Override public double get(double arg1, double arg2) {
                 return arg1 / arg2;
             }
         });
@@ -186,36 +186,18 @@ public class PublicAPITests {
         }
     }
 
-    @Test public void testNull() {
-        Evald evald = new Evald();
-        evald.parse("x");
-        evald.addVariable("x", (Double) null);
-        assertNull(evald.evaluate());
-        evald.addLibrary(Library.LOGIC);
-        evald.parse("isnull(x)");
-        assertEquals(1.0, evald.evaluate(), DEFAULT_PRECISION);
-        evald.parse("x * y");
-        evald.addVariable("y", 5);
-        try {
-            assertNull(evald.evaluate());
-            fail("Expected a null pointer exception");
-        } catch (Throwable t) {
-            assertThat(t, instanceOf(NullPointerException.class));
-        }
-        evald.addVariable("x", 1);
-        evald.parse("isnull(x)");
-        assertEquals(0, evald.evaluate(), DEFAULT_PRECISION);
-    }
-
     @Test public void testListUndeclared() {
         Evald evald = new Evald();
         assertEquals(true, evald.getAllowUndeclared());
         evald.setAllowUndeclared(true);
         assertEquals(true, evald.getAllowUndeclared());
+        evald.addVariable("abc");
+        evald.addVariable("q");
         evald.parse("abc * def + g / h");
         Set<String> vars = new HashSet<String>(Arrays.asList(evald.listUndeclared()));
         assertEquals(4, vars.size());
-        assertTrue(vars.contains("abc"));
+        assertFalse(vars.contains("abc"));
+        assertFalse(vars.contains("q"));
         assertTrue(vars.contains("def"));
         assertTrue(vars.contains("g"));
         assertTrue(vars.contains("h"));
@@ -343,7 +325,7 @@ public class PublicAPITests {
         assertEquals(2 * Math.sin(45), evald.evaluate(), DEFAULT_PRECISION);
         //replace sin()
         evald.addUserFunction(new OneArgFunction("sin") {
-            @Override protected Double get(Double value) {
+            @Override protected double get(double value) {
                 return value + 1;
             }
         });
@@ -358,7 +340,7 @@ public class PublicAPITests {
         Evald evald = new Evald();
         try {
             evald.addUserFunction(new OneArgFunction("value+1") {
-                @Override protected Double get(Double value) {
+                @Override protected double get(double value) {
                     return value + 1;
                 }
             });
@@ -369,7 +351,7 @@ public class PublicAPITests {
         }
         try {
             evald.addUserFunction(new OneArgFunction("#value1") {
-                @Override protected Double get(Double value) {
+                @Override protected double get(double value) {
                     return value + 1;
                 }
             });
@@ -380,7 +362,7 @@ public class PublicAPITests {
         }
         //legal
         evald.addUserFunction(new OneArgFunction("_Value_1") {
-            @Override protected Double get(Double value) {
+            @Override protected double get(double value) {
                 return value + 1;
             }
         });
@@ -613,6 +595,22 @@ public class PublicAPITests {
         checkMath(evald, "toRadians(a)*b", Math.toRadians(a) * b);
     }
 
+    @Test public void testExtraMath() {
+        Evald evald = new Evald(Library.MATH, Library.LOGIC, Library.CORE);
+        double a = 11.0;
+        double b = -0.5;
+        double c = 1.0;
+        evald.addVariable("a", a);
+        evald.addVariable("b", b);
+        evald.addVariable("c", c);
+        checkMath(evald, "atanh(-0.9)", 0.5 * Math.log(0.1 / 1.9));
+        checkMath(evald, "acosh(2.5)", Math.log(2.5 + Math.pow(Math.pow(2.5, 2) - 1, 0.5)));
+        checkMath(evald, "asinh(-3.2)", Math.log(-3.2 + Math.pow(Math.pow(-3.2, 2) + 1, 0.5)));
+        checkMath(evald, "cot(2.0)", 1 / Math.tan(2.0));
+        checkMath(evald, "cosec(2.0)", 1 / Math.sin(2.0));
+        checkMath(evald, "sec(2.0)", 1 / Math.cos(2.0));
+    }
+
     @Test public void testAddVariableTypes() {
         Evald evald = new Evald();
         evald.addVariable("a", 1);
@@ -620,5 +618,31 @@ public class PublicAPITests {
         evald.addVariable("c", 3.0);
         evald.parse("a+b+c");
         assertEquals(1 * 2 * 3, evald.evaluate(), DEFAULT_PRECISION);
+    }
+
+    @Test public void testListAllVariables() {
+        Evald evald = new Evald();
+        evald.addVariable("a", 1);
+        evald.addVariable("b", 2);
+        evald.parse("a + b + c");
+        evald.addVariable("d", 3);
+        Set<String> vars = new HashSet<String>(Arrays.asList(evald.listAllVariables()));
+        assertTrue(vars.contains("a"));
+        assertTrue(vars.contains("b"));
+        assertTrue(vars.contains("c"));
+        assertTrue(vars.contains("d"));
+    }
+
+    @Test public void testListActiveVariables() {
+        Evald evald = new Evald();
+        evald.addVariable("a", 1);
+        evald.addVariable("b", 2);
+        evald.parse("a + b + c");
+        evald.addVariable("d", 3);
+        Set<String> vars = new HashSet<String>(Arrays.asList(evald.listActiveVariables()));
+        assertTrue(vars.contains("a"));
+        assertTrue(vars.contains("b"));
+        assertTrue(vars.contains("c"));
+        assertFalse(vars.contains("d"));
     }
 }

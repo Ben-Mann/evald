@@ -14,7 +14,7 @@ public abstract class ArgFunction extends ValueNode {
     final int minArgs;
     final int maxArgs;
     protected Node[] inputs;
-    protected Double[] values;
+    protected double[] values;
     final String token;
 
     protected ArgFunction(String token, int minArgs, int maxArgs) {
@@ -26,7 +26,7 @@ public abstract class ArgFunction extends ValueNode {
 
     void set(List<Node> inputs) {
         this.inputs = inputs.toArray(new Node[] {});
-        values = new Double[inputs.size()];
+        values = new double[inputs.size()];
     }
 
     @Override final Node collapse() {
@@ -53,8 +53,8 @@ public abstract class ArgFunction extends ValueNode {
     /**
      * An {@link ArgFunction} which allows for vararg functions.
      * 
-     * Override the {@link #get(Double...)} method to implement desired custom functionality.
-     * If a limited number of arguments are required, it's possible to throw an exception from {@link #get(Double...)},
+     * Override the {@link #get(double...)} method to implement desired custom functionality.
+     * If a limited number of arguments are required, it's possible to throw an exception from {@link #get(double...)},
      * which will detect the argument mismatch on a call to {@link Evald#evaluate()}.
      * A better option is to use {@link OneArgFunction}, {@link TwoArgFunction} or {@link ThreeArgFunction},
      * which will raise a parse exception on the earlier call to {@link Evald#parse(String)}.
@@ -70,7 +70,21 @@ public abstract class ArgFunction extends ValueNode {
             super(token, 0, NArgParser.NO_MAX);
         }
 
-        @Override protected Double get() {
+        /**
+         * Construct a function evaluator that takes multiple arguments
+         * 
+         * @param token
+         *            the token to be used. Must be a valid token (start with [a-zA-Z_], contain only [a-zA-Z0-9_])
+         * @param minArgs
+         *            minimum legal number of arguments.
+         * @param maxArgs
+         *            maximum legal number of arguments, or {@link Parser#NO_MAX} if the maximum is unlimited.
+         */
+        public NArgFunction(String token, int minArgs, int maxArgs) {
+            super(token, minArgs, maxArgs);
+        }
+
+        @Override protected double get() {
             for (int i = 0; i < inputs.length; i++) {
                 values[i] = inputs[i].get();
             }
@@ -84,13 +98,13 @@ public abstract class ArgFunction extends ValueNode {
          *            A variable number of arguments, as supplied in the expression. Note that values may also be Inf, NaN or null.
          * @return the result of the custom function.
          */
-        abstract protected Double get(Double... args);
+        abstract protected double get(double... args);
     }
 
     /**
      * An {@link ArgFunction} which allows for single-argument functions.
      * 
-     * Override the {@link #get(Double)} method to implement desired custom functionality.
+     * Override the {@link #get(double)} method to implement desired custom functionality.
      * Allows for parsing checks for the correct number of arguments.
      */
     static abstract public class OneArgFunction extends ArgFunction {
@@ -104,7 +118,7 @@ public abstract class ArgFunction extends ValueNode {
             super(token, 1, 1);
         }
 
-        @Override protected Double get() {
+        @Override protected double get() {
             return get(inputs[0].get());
         }
 
@@ -115,13 +129,13 @@ public abstract class ArgFunction extends ValueNode {
          *            The single argument supplied for this evaluation. Note that values may also be Inf, NaN or null.
          * @return the result of the custom function.
          */
-        abstract protected Double get(Double value);
+        abstract protected double get(double value);
     }
 
     /**
      * An {@link ArgFunction} which allows for two-argument functions.
      * 
-     * Override the {@link #get(Double, Double)} method to implement desired custom functionality.
+     * Override the {@link #get(double, double)} method to implement desired custom functionality.
      * Allows for parsing checks for the correct number of arguments.
      */
     static abstract public class TwoArgFunction extends ArgFunction {
@@ -135,7 +149,7 @@ public abstract class ArgFunction extends ValueNode {
             super(token, 2, 2);
         }
 
-        @Override protected Double get() {
+        @Override protected double get() {
             return get(inputs[0].get(), inputs[1].get());
         }
 
@@ -148,13 +162,13 @@ public abstract class ArgFunction extends ValueNode {
          *            The second argument supplied for this evaluation. Note that values may also be Inf, NaN or null.
          * @return the result of the custom function.
          */
-        abstract protected Double get(Double arg1, Double arg2);
+        abstract protected double get(double arg1, double arg2);
     }
 
     /**
      * An {@link ArgFunction} which allows for three-argument functions.
      * 
-     * Override the {@link #get(Double, Double, Double)} method to implement desired custom functionality.
+     * Override the {@link #get(double, double, double)} method to implement desired custom functionality.
      * Allows for parsing checks for the correct number of arguments.
      */
     static abstract public class ThreeArgFunction extends ArgFunction {
@@ -168,7 +182,7 @@ public abstract class ArgFunction extends ValueNode {
             super(token, 3, 3);
         }
 
-        @Override protected Double get() {
+        @Override protected double get() {
             return get(inputs[0].get(), inputs[1].get(), inputs[2].get());
         }
 
@@ -183,6 +197,6 @@ public abstract class ArgFunction extends ValueNode {
          *            The third argument supplied for this evaluation. Note that values may also be Inf, NaN or null.
          * @return the result of the custom function.
          */
-        abstract protected Double get(Double arg1, Double arg2, Double arg3);
+        abstract protected double get(double arg1, double arg2, double arg3);
     }
 }

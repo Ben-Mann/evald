@@ -22,9 +22,13 @@ public class Evald {
     private boolean allowMultiplePostfixOperators = true;
     private static final Pattern validTokenPattern = Pattern.compile("^[a-zA-Z_][a-zA-Z_0-9]*$");
 
-    final List<Double> valueList = new ArrayList<Double>();
+    private final List<Double> valueList = new ArrayList<Double>();
+    private double[] valueArray;
+
     final Map<String, Integer> keyIndexMap = new HashMap<String, Integer>();
     final Set<String> undeclaredKeyMap = new HashSet<String>();
+    final List<SetValueArrayCallback> valueArrayCallbacks = new ArrayList<SetValueArrayCallback>();
+    final Set<Integer> usedIndices = new HashSet<Integer>();
 
     ParserList<ValueParser> valueParsers = new ParserList<ValueParser>();
     ParserList<BinaryOperatorParser> binaryOperatorParsers = new ParserList<BinaryOperatorParser>();
@@ -59,7 +63,7 @@ public class Evald {
      */
     public void removeLibrary(Library... libraries) {
         for (Library library : libraries) {
-            removeParsers(library.getParsers());
+            remove(library.getParsers());
         }
     }
 
@@ -86,7 +90,22 @@ public class Evald {
      *             on any other syntax error.
      */
     public void parse(String expression) {
+        valueArrayCallbacks.clear();
+        usedIndices.clear();
+        
         root = new ExpressionParser(this, new ExpressionString(expression)).parse();
+
+        valueArray = new double[valueList.size()];
+        //transfer values
+        for (int i = 0; i < valueList.size(); i++) {
+            if (valueList.get(i) == null)
+                continue;
+            valueArray[i] = valueList.get(i);
+        }
+        for (SetValueArrayCallback callback : valueArrayCallbacks) {
+            callback.setValueArray(valueArray);
+        }
+
         if (allowUndeclared || undeclaredKeyMap.isEmpty())
         	return;
         
@@ -101,7 +120,7 @@ public class Evald {
      * @throws NullPointerException
      *             if an operation is attempted on a null variable.
      */
-    public Double evaluate() {
+    public double evaluate() {
         return root.get();
     }
 
@@ -113,7 +132,7 @@ public class Evald {
      * @return an index that can be used to update this variable with {@link #setVariable}. The same index will be returned if the variable was previously added using addVariable.
      */
     public int addVariable(String token) {
-        return addVariable(token, (Double) null);
+        return addVariableToList(token, 0.0);
     }
 
     /**
@@ -127,8 +146,8 @@ public class Evald {
      *            an initial value for the variable.
      * @return an index that can be used to update this variable with {@link #setVariable}. The same index will be returned if the variable was previously added using addVariable.
      */
-    public int addVariable(String token, Float value) {
-        return addVariable(token, value.doubleValue());
+    public int addVariable(String token, float value) {
+        return addVariableToList(token, (double) value);
     }
 
     /**
@@ -142,8 +161,8 @@ public class Evald {
      *            an initial value for the variable.
      * @return an index that can be used to update this variable with {@link #setVariable}. The same index will be returned if the variable was previously added using addVariable.
      */
-    public int addVariable(String token, Integer value) {
-        return addVariable(token, value.doubleValue());
+    public int addVariable(String token, int value) {
+        return addVariableToList(token, (double) value);
     }
 
     /**
@@ -155,7 +174,14 @@ public class Evald {
      *            an initial value for the variable.
      * @return an index that can be used to update this variable with {@link #setVariable}. The same index will be returned if the variable was previously added using addVariable.
      */
-    public int addVariable(String token, Double value) {
+    public int addVariable(String token, double value) {
+        return addVariableToList(token, value);
+    }
+
+    /**
+     * Add a variable. If the variable has an index, add it to valueArray AND valueList, otherwise add it only to valueList.
+     */
+    private int addVariableToList(String token, Double value) {
         if (!validToken(token))
             throw new InvalidTokenEvaldException(token);
 
@@ -166,6 +192,9 @@ public class Evald {
             valueList.add(value);
         } else {
         	valueList.set(result, value);
+            if (valueArray.length > result) {
+                valueArray[result] = value;
+            }
         }
         return result;
     }
@@ -180,8 +209,8 @@ public class Evald {
      * @throws IndexOutOfBoundsException
      *             if the index was not obtained from {@link #addVariable}
      */
-    public void setVariable(int index, Double value) {
-        valueList.set(index, value);
+    public void setVariable(int index, double value) {
+        valueArray[index] = value;
     }
 
     /**
@@ -196,8 +225,8 @@ public class Evald {
      * @throws IndexOutOfBoundsException
      *             if the index was not obtained from {@link #addVariable}
      */
-    public void setVariable(int index, Float value) {
-        valueList.set(index, value.doubleValue());
+    public void setVariable(int index, float value) {
+        valueArray[index] = (double) value;
     }
 
     /**
@@ -212,8 +241,8 @@ public class Evald {
      * @throws IndexOutOfBoundsException
      *             if the index was not obtained from {@link #addVariable}
      */
-    public void setVariable(int index, Integer value) {
-        valueList.set(index, value.doubleValue());
+    public void setVariable(int index, int value) {
+        valueArray[index] = (double) value;
     }
 
     /**
@@ -249,6 +278,30 @@ public class Evald {
      */
     public String[] listUndeclared() {
         return undeclaredKeyMap.toArray(new String[] {});
+    }
+
+    /**
+     * List all variables currently defined in this Evald instance
+     */
+    public String[] listAllVariables() {
+        return keyIndexMap.keySet().toArray(new String[] {});
+    }
+
+    /**
+     * List all variables currently in use by this instance's expression (including undefined variables, if permitted by {@link #setAllowUndeclared(boolean)}).
+     */
+    public String[] listActiveVariables() {
+        if (root == null || usedIndices.isEmpty())
+            return new String[] {};
+        
+        List<String> result = new ArrayList<String>();
+        
+        for(Map.Entry<String,Integer> entry : keyIndexMap.entrySet()) {
+            if (usedIndices.contains(entry.getValue()))
+                result.add(entry.getKey());
+        }
+
+        return result.toArray(new String[] {});
     }
 
     /**
@@ -364,12 +417,34 @@ public class Evald {
             binaryOperatorParsers.remove((BinaryOperatorParser) parser);
         }
     }
+    
+    /**
+     * Remove any constant using the specified token. Allows you to create variables a,b,c,d,e, for example,
+     * if the constant e is not required.
+     * 
+     * @param token the constant to be removed.
+     */
+    public void removeConstant(String token) {
+        if (token == null || token.isEmpty())
+            return;
+        
+        List<ValueParser> toRemove = new ArrayList<ValueParser>();
+        for (ValueParser parser : valueParsers) {
+            if (token.equals(parser.token) && parser instanceof ConstantParser) {
+                toRemove.add(parser);
+            }
+        }
+
+        for (ValueParser parser : toRemove) {
+            valueParsers.remove(parser);
+        }
+    }
 
     String toTree() {
         return root.toTree("");
     }
 
-    private void removeParsers(Parser... parsers) {
+    public void remove(Parser... parsers) {
         for (Parser parser : parsers) {
             removeParser(parser);
         }
@@ -377,5 +452,13 @@ public class Evald {
 
     private boolean validToken(String token) {
         return validTokenPattern.matcher(token).find();
+    }
+
+    void addValueArrayCallback(SetValueArrayCallback valueArrayCallback) {
+        valueArrayCallbacks.add(valueArrayCallback);
+    }
+
+    void addUsedIndex(int variableIndex) {
+        usedIndices.add(variableIndex);
     }
 }

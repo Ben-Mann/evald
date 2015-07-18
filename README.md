@@ -173,12 +173,12 @@ The math library (LibMath) provides functions and constants as follows:
 * ```atan(a)``` returns the arc tangent of ```a```
 * ```atan2(y,x)``` returns the angle _theta_ from conversion of rectangular (```x```,```y```) to the polar (r,_theta_)
 * ```sin(a)``` return the trignometric sine of ```a```
-* ```atanh(a)```
-* ```acosh(a)```
-* ```asinh(a)```
-* ```cot(a)```
-* ```cosec(a)```
-* ```sec(a)```
+* ```atanh(a)``` return the inverse hyperbolic tangent of ```a```
+* ```acosh(a)``` return the inverse hyperbolic cosine of ```a```
+* ```asinh(a)``` return the inverse hyperbolic sine of ```a```
+* ```cot(a)``` return the cotangent of angle ```a``` in radians
+* ```cosec(a)``` return the cosecant of angle ```a``` in radians
+* ```sec(a)``` return the secant of angle ```a``` in radians
 
 ## Extensibility
 

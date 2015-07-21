@@ -8,6 +8,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import net.benmann.evald.EvaldException.EmptyExpressionEvaldException;
 import net.benmann.evald.EvaldException.InvalidTokenEvaldException;
 import net.benmann.evald.EvaldException.UndeclaredVariableEvaldException;
 import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
@@ -93,7 +94,11 @@ public class Evald {
         valueArrayCallbacks.clear();
         usedIndices.clear();
         
-        root = new ExpressionParser(this, new ExpressionString(expression)).parse();
+        ExpressionString string = new ExpressionString(expression);
+        if (string.expression.isEmpty())
+            throw new EmptyExpressionEvaldException(string);
+
+        root = new ExpressionParser(this, string).parse();
 
         valueArray = new double[valueList.size()];
         //transfer values

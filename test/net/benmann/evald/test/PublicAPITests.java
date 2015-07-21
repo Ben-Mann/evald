@@ -35,7 +35,15 @@ public class PublicAPITests {
             evald.parse("a#");
             fail();
         } catch (Throwable t) {
-            assertThat(t, instanceOf(OperatorExpectedEvaldException.class));
+            t.printStackTrace();
+            assertThat(t, instanceOf(EvaldException.class));
+        }
+        try {
+            evald.parse("");
+            fail();
+        } catch (Throwable t) {
+            t.printStackTrace();
+            assertThat(t, instanceOf(EvaldException.class));
         }
     }
 
@@ -46,6 +54,20 @@ public class PublicAPITests {
         evald.addVariable("b", 3.0);
         evald.addVariable("c", 7.0);
         assertEquals(2 * 3 + 7.0, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a*.75");
+        assertEquals(2 * 0.75, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a*0.750");
+        assertEquals(2 * 0.75, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a*0.750000000000000001");
+        assertEquals(2 * 0.75, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a*7.5e-1");
+        assertEquals(2 * 0.75, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a*.0075e+2");
+        assertEquals(2 * 0.75, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a*1.510e+3");
+        assertEquals(2 * 1510, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a*1.510e+23");
+        assertEquals(2 * 1.51e+23, evald.evaluate(), DEFAULT_PRECISION * Math.pow(10, 23));
     }
 
     @Test public void testPrecedence() {
@@ -195,7 +217,7 @@ public class PublicAPITests {
         evald.addVariable("q");
         evald.parse("abc * def + g / h");
         Set<String> vars = new HashSet<String>(Arrays.asList(evald.listUndeclared()));
-        assertEquals(4, vars.size());
+        assertEquals(3, vars.size());
         assertFalse(vars.contains("abc"));
         assertFalse(vars.contains("q"));
         assertTrue(vars.contains("def"));
@@ -238,6 +260,8 @@ public class PublicAPITests {
         assertEquals(true, evald.getImplicitMultiplication());
         evald.parse("a b");
         assertEquals(2.0 * 3.0, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse(".75a");
+        assertEquals(2 * 0.75, evald.evaluate(), DEFAULT_PRECISION);
 
     }
 

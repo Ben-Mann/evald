@@ -125,7 +125,7 @@ class ExpressionParser {
         return true;
     }
 
-    final Pattern implictMultiplyPattern = Pattern.compile("^(\\s+).*");
+    final Pattern implictMultiplyPattern = Pattern.compile("^(\\s*).*");
     
     boolean readOperator() {
     	String msg = expression.expression;

@@ -17,8 +17,7 @@ class NArgParser extends ValueParser {
 
     NArgParser(int minArguments, int maxArguments, CreateNArgFunctionFn createFn) {
         super(createFn.token);
-        assert (maxArguments == NO_MAX || minArguments < maxArguments);
-		assert(maxArguments > 0);
+        assert (maxArguments == NO_MAX || minArguments <= maxArguments);
         pattern = Pattern.compile("^(\\s*" + Pattern.quote(token) + "\\()");
 		this.minArguments = minArguments;
 		this.maxArguments = maxArguments;
@@ -70,7 +69,7 @@ class NArgParser extends ValueParser {
 			throw new EvaldException("Insufficient arguments for function " + token);
 		}
 		
-        if (maxArguments > 0 && args.size() > maxArguments) {
+        if (maxArguments >= 0 && args.size() > maxArguments) {
 			throw new EvaldException("Too many arguments for function " + token);
 		}
 		

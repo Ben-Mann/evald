@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
  */
 public final class LibArithmetic extends Library {
     @Override Parser[] getParsers() {
-        return new Parser[] { CONSTANT, NaN, MOD, ADD, SUBTRACT, MULTIPLY, DIVIDE, POSITIVE, NEGATIVE, POW, BRACES };
+        return new Parser[] { CONSTANT, CONSTANTSN, NaN, MOD, ADD, SUBTRACT, MULTIPLY, DIVIDE, POSITIVE, NEGATIVE, POW, BRACES };
     }
 
     public static final ConstantParser NaN = new ConstantParser("nan") {
@@ -273,10 +273,10 @@ public final class LibArithmetic extends Library {
 
     //FIXME support exponents, ie 1.5E+35, or else don't, explicitly
     private static final Pattern constantPattern = Pattern.compile("[0-9]*\\.?[0-9]+");
-    public static final ValueParser CONSTANT = new ValueParser(null) {
+    public static final ValueParser CONSTANT = new ValueParser(constantPattern.toString()) {
         @Override Node parse(ExpressionParser operationParser, ExpressionString str) {
             Character ch = str.expression.charAt(0);
-            if (!Character.isDigit(ch))
+            if (!Character.isDigit(ch) && !ch.equals('.'))
                 return null;
 
             //Find a value
@@ -288,6 +288,32 @@ public final class LibArithmetic extends Library {
 
             str.update(content.length());
             return new Constant(Double.parseDouble(content));
+        }
+    };
+
+    //Scientific Notation Version
+    private static final Pattern constantSNPattern = Pattern.compile("[0-9]*\\.?[0-9]+[eE][\\+\\-][0-9]*\\.?[0-9]+");
+    public static final ValueParser CONSTANTSN = new ValueParser(constantSNPattern.toString()) {
+        @Override Node parse(ExpressionParser operationParser, ExpressionString str) {
+            Character ch = str.expression.charAt(0);
+            if (!Character.isDigit(ch) && !ch.equals('.'))
+                return null;
+
+            //Find a value
+            Matcher matcher = constantSNPattern.matcher(str.expression);
+            if (!matcher.find())
+                return null;
+
+            final String content = matcher.group();
+            //split at e
+            String[] parts = content.split("[eE]");
+
+            double m = Double.parseDouble(parts[0]);
+            double exp = Double.parseDouble(parts[1]);
+            double value = m * Math.pow(10, exp);
+
+            str.update(content.length());
+            return new Constant(value);
         }
     };
 }

@@ -5,7 +5,6 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.fail;
 import net.benmann.evald.ArgFunction.OneArgFunction;
-import net.benmann.evald.EvaldException.OperatorExpectedEvaldException;
 
 import org.junit.Test;
 
@@ -98,7 +97,7 @@ public class PackageTests {
             evald.parse("b!!");
             fail();
         } catch (Throwable t) {
-            assertThat(t, instanceOf(OperatorExpectedEvaldException.class));
+            assertThat(t, instanceOf(EvaldException.class));
         }
         evald.setAllowMultiplePostfixOperators(true);
         assertEquals(true, evald.getAllowMultiplePostfixOperators());

@@ -35,14 +35,12 @@ public class PublicAPITests {
             evald.parse("a#");
             fail();
         } catch (Throwable t) {
-            t.printStackTrace();
             assertThat(t, instanceOf(EvaldException.class));
         }
         try {
             evald.parse("");
             fail();
         } catch (Throwable t) {
-            t.printStackTrace();
             assertThat(t, instanceOf(EvaldException.class));
         }
     }

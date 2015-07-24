@@ -70,9 +70,10 @@ public final class LibArithmetic extends Library {
                     if (a.isConstant && b.isConstant)
                         return new Constant(get());
 
+                    /* XXX Doesn't work if b is NaN.
                     if (a.isConstant && a.get() == 0)
                         return new Constant(0.0);
-
+                     */
                     return this;
                 }
 
@@ -165,8 +166,8 @@ public final class LibArithmetic extends Library {
                     Node variableNode = a.isConstant ? b : a;
 
                     double value = constantNode.get();
-                    if (value == 0)
-                        return new Constant(0.0);
+                    //FIXME - INF*0 is NaN - we can't make this optimisation, then?
+                    // if (value == 0) return new Constant(0.0);
                     if (value == 1)
                         return variableNode;
 
@@ -193,8 +194,10 @@ public final class LibArithmetic extends Library {
                     if (a.isConstant && b.isConstant)
                         return new Constant(get());
 
+                    /* XXX Fails if a is nan
                     if (a.isConstant && a.get() == 0)
                         return new Constant(0.0);
+                     */
 
                     if (b.isConstant && b.get() == 1)
                         return a;
@@ -272,7 +275,7 @@ public final class LibArithmetic extends Library {
     };
 
     //FIXME support exponents, ie 1.5E+35, or else don't, explicitly
-    private static final Pattern constantPattern = Pattern.compile("[0-9]*\\.?[0-9]+");
+    private static final Pattern constantPattern = Pattern.compile("^[0-9]*\\.?[0-9]+");
     public static final ValueParser CONSTANT = new ValueParser(constantPattern.toString()) {
         @Override Node parse(ExpressionParser operationParser, ExpressionString str) {
             Character ch = str.expression.charAt(0);
@@ -292,7 +295,7 @@ public final class LibArithmetic extends Library {
     };
 
     //Scientific Notation Version
-    private static final Pattern constantSNPattern = Pattern.compile("[0-9]*\\.?[0-9]+[eE][\\+\\-][0-9]*\\.?[0-9]+");
+    private static final Pattern constantSNPattern = Pattern.compile("^[0-9]*\\.?[0-9]+[eE][\\+\\-][0-9]*\\.?[0-9]+");
     public static final ValueParser CONSTANTSN = new ValueParser(constantSNPattern.toString()) {
         @Override Node parse(ExpressionParser operationParser, ExpressionString str) {
             Character ch = str.expression.charAt(0);

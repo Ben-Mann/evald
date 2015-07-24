@@ -95,14 +95,7 @@ public class PublicAPITests {
         evald.addVariable("a", 11.039);
         evald.addVariable("b", -248.597);
         evald.parse("(-100000-a+b*333.3)/1000");
-        //Gets done wrong. Is broken into
-        //(-10000-(a+(b*333.3)))/1000
-        //But it should be
-        //((-10000-a)+(b*333.3))/1000
-        //However if you subtract 
-        System.err.println(evald.toTree());
         assertEquals((-100000 - 11.039 + (-248.597) * 333.3) / 1000, evald.evaluate(), DEFAULT_PRECISION);
-
     }
 
     @Test public void testSin() {
@@ -318,6 +311,36 @@ public class PublicAPITests {
         assertEquals(0, evald.evaluate(), DEFAULT_PRECISION);
     }
 
+    private void testCollapse(double inv) {
+        Evald evald = new Evald(Library.CORE, Library.LOGIC);
+        evald.addVariable("a", inv);
+        evald.parse("a + 0");
+        assertEquals(inv + 0, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a * a");
+        assertEquals(inv * inv, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("0 % a");
+        assertEquals(0 % inv, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("0 / a");
+        assertEquals(0 / inv, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a / 1");
+        assertEquals(inv / 1, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a * 1");
+        assertEquals(inv * 1, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a ^ 0");
+        assertEquals(Math.pow(inv, 0), evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a ^ 1");
+        assertEquals(Math.pow(inv, 1), evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a * 0");
+        assertEquals(inv * 0, evald.evaluate(), DEFAULT_PRECISION);
+
+    }
+
+    @Test public void testCollapse() {
+        testCollapse(Double.POSITIVE_INFINITY);
+        testCollapse(Double.NaN);
+        testCollapse(Double.MAX_VALUE);
+    }
+
     @Test public void testNaN() {
         Evald evald = new Evald(Library.ALL);
         evald.parse("if(isnan(sqrt(a)),2,3)");
@@ -516,6 +539,26 @@ public class PublicAPITests {
         evald.addLibrary(Library.LOGIC);
         evald.parse("if(" + expression + ",1,0)");
         assertEquals(expect ? 1 : 0, evald.evaluate(), DEFAULT_PRECISION);
+    }
+
+    @Test public void testAssignment() {
+        Evald evald = new Evald();
+        evald.addVariable("a", 2);
+        evald.addVariable("b", 5);
+        try {
+            evald.parse("a == b");
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(EvaldException.class));
+        }
+        evald.addLibrary(Library.LOGIC);
+        evald.parse("a == b");
+        assertEquals(0, evald.evaluate(), DEFAULT_PRECISION);
+        try {
+            //Assignment is not yet supported.
+            evald.parse("a = b");
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(EvaldException.class));
+        }
     }
 
     @Test public void testLibConditional() {

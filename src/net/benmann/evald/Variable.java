@@ -38,7 +38,7 @@ class Variable extends ValueNode {
         return sb.toString();
     }
 
-    static Pattern pattern = Pattern.compile("[a-zA-Z_][a-z_A-Z0-9]*");
+    static Pattern pattern = Pattern.compile("^[a-zA-Z_][a-z_A-Z0-9]*");
     static ValueParser parser = new ValueParser(null) {
         @Override ValueNode parse(ExpressionParser operationParser, ExpressionString str) {
             //Find a value

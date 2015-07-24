@@ -30,7 +30,11 @@ class Variable extends ValueNode {
 
     @Override String toTree(String prefix) {
         StringBuilder sb = new StringBuilder();
-        sb.append(prefix).append("Variable[").append(index).append("]\n");
+        String value = "undefined";
+        if (values != null && values.length > index) {
+            value = Double.toString(get());
+        }
+        sb.append(prefix).append("Variable[").append(index).append("] (").append(value).append(")\n");
         return sb.toString();
     }
 

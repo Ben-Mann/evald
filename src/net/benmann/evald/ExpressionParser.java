@@ -100,10 +100,7 @@ class ExpressionParser {
         if (lastValue != null) {
             b = lastValue;
         } else {
-            //            if (lastOperator == null) 
                 throw new EvaldException("The postfix operator "+parser.token+" requires an lvalue.");
-            //            assert(lastOperator instanceof PostfixOperatorNode);
-            //            b = lastOperator;
         }
             
         if (root == null) {
@@ -155,14 +152,13 @@ class ExpressionParser {
         if (node == null)
             throw new OperatorExpectedEvaldException(expression);
         
-        //is lastValue our lvalue, or is it the rvalue of an operator that's our lvalue (or is that the rvalue of an operator that's our...)
         if (lastValue == null)
         	throw new EvaldException("The operator "+parser.token+" at " + msg + " requires an lvalue");
         
         Node lvalue = lastValue;
         lastValue = null;
         
-        while (lvalue.parent != null && lvalue.parent.getPrecedence() > node.getPrecedence()) {
+        while (lvalue.parent != null && lvalue.parent.getPrecedence() >= node.getPrecedence()) {
         	lvalue = lvalue.parent;
         }
         

@@ -82,6 +82,29 @@ public class PublicAPITests {
         assertEquals(2.0 + (3.0 * 7.0), evald.evaluate(), DEFAULT_PRECISION);
     }
 
+    @Test public void testPrefix() {
+        Evald evald = new Evald();
+        evald.parse("a+b");
+        evald.addVariable("a", -1);
+        evald.addVariable("b", -2);
+        assertEquals(-3, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("-1+a+b+-4");
+        assertEquals(-8, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("(a+b*10)/2");
+        assertEquals((-1.0 + (-2.0 * 10.0)) / 2.0, evald.evaluate(), DEFAULT_PRECISION);
+        evald.addVariable("a", 11.039);
+        evald.addVariable("b", -248.597);
+        evald.parse("(-100000-a+b*333.3)/1000");
+        //Gets done wrong. Is broken into
+        //(-10000-(a+(b*333.3)))/1000
+        //But it should be
+        //((-10000-a)+(b*333.3))/1000
+        //However if you subtract 
+        System.err.println(evald.toTree());
+        assertEquals((-100000 - 11.039 + (-248.597) * 333.3) / 1000, evald.evaluate(), DEFAULT_PRECISION);
+
+    }
+
     @Test public void testSin() {
         Evald evald = new Evald();
         evald.addLibrary(Library.MATH);

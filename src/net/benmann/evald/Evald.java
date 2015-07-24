@@ -445,7 +445,12 @@ public class Evald {
         }
     }
 
-    String toTree() {
+    /**
+     * Construct a human readable representation of the expression tree
+     * 
+     * @return a multiline string containing the final optimised expression tree.
+     */
+    public String toTree() {
         return root.toTree("");
     }
 

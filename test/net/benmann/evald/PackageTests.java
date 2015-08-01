@@ -38,13 +38,13 @@ public class PackageTests {
 
     @Test public void testCollapse() {
         testOptimisation("v * 1", "v", 1);
-        testOptimisation("v * 0", "0", 1);
+        testOptimisation("v * 0", "v * 0", 3); //0*inf = nan, so we don't optimise this. 
         testOptimisation("1 * v", "v", 1);
-        testOptimisation("0 * v", "0", 1);
+        testOptimisation("0 * v", "0 * v", 3);
         testOptimisation("v * 2", "v * 2", 3);
         testOptimisation("v * 1 + 1", "v + 1", 3);
 
-        testOptimisation("0 / v", "0", 1);
+        testOptimisation("0 / v", "0 / v", 3);
         testOptimisation("v / 1", "v", 1);
         testOptimisation("v / 0", "v / 0", 3);
 
@@ -64,7 +64,7 @@ public class PackageTests {
         testOptimisation("v ^ 0", "1", 1);
 
         testOptimisation("2 % v", "2 % v", 3);
-        testOptimisation("0 % v", "0", 1);
+        testOptimisation("0 % v", "0 % v", 3);
 
         testOptimisation("v * (sin(toRadians(90))^2) + 1", "v + 1", 3);
     }

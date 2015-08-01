@@ -70,7 +70,7 @@ public final class LibArithmetic extends Library {
                     if (a.isConstant && b.isConstant)
                         return new Constant(get());
 
-                    /* XXX Doesn't work if b is NaN.
+                    /* XXX 0 % nan is nan, not 0
                     if (a.isConstant && a.get() == 0)
                         return new Constant(0.0);
                      */
@@ -194,7 +194,7 @@ public final class LibArithmetic extends Library {
                     if (a.isConstant && b.isConstant)
                         return new Constant(get());
 
-                    /* XXX Fails if a is nan
+                    /* XXX 0/nan is nan, not 0 - can't do this optimisation
                     if (a.isConstant && a.get() == 0)
                         return new Constant(0.0);
                      */
@@ -308,15 +308,8 @@ public final class LibArithmetic extends Library {
                 return null;
 
             final String content = matcher.group();
-            //split at e
-            String[] parts = content.split("[eE]");
-
-            double m = Double.parseDouble(parts[0]);
-            double exp = Double.parseDouble(parts[1]);
-            double value = m * Math.pow(10, exp);
-
             str.update(content.length());
-            return new Constant(value);
+            return new Constant(Double.valueOf(content));
         }
     };
 }

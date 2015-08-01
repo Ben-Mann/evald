@@ -66,6 +66,8 @@ public class PublicAPITests {
         assertEquals(2 * 1510, evald.evaluate(), DEFAULT_PRECISION);
         evald.parse("a*1.510e+23");
         assertEquals(2 * 1.51e+23, evald.evaluate(), DEFAULT_PRECISION * Math.pow(10, 23));
+        evald.parse("a*1.45767979e+3");
+        assertEquals(2 * 1.45767979e+3, evald.evaluate(), DEFAULT_PRECISION * Math.pow(10, 23));
     }
 
     @Test public void testPrecedence() {

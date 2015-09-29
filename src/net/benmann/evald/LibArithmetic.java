@@ -274,7 +274,6 @@ public final class LibArithmetic extends Library {
         }
     };
 
-    //FIXME support exponents, ie 1.5E+35, or else don't, explicitly
     private static final Pattern constantPattern = Pattern.compile("^[0-9]*\\.?[0-9]+");
     public static final ValueParser CONSTANT = new ValueParser(constantPattern.toString()) {
         @Override Node parse(ExpressionParser operationParser, ExpressionString str) {

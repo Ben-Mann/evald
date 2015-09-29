@@ -150,6 +150,7 @@ The math library (LibMath) provides functions and constants as follows:
 * ```pi``` constant value for _pi_
 * ```random()``` return a random number greater than or equal to 0 and less than 1
 * ```log(n)``` return the natural (base ```e```) logarithm of ```n```
+* ```log2(n)``` return the base 2 logarithm of ```n```
 * ```log10(n)``` return the base 10 logarithm of ```n```
 * ```exp(n)``` returns ```e``` raised to ```n```
 * ```floor(n)``` return the largest integer equal to or less than ```n```
@@ -159,7 +160,9 @@ The math library (LibMath) provides functions and constants as follows:
 * ```min(a,b)``` return the minimum of ```a``` and ```b```
 * ```max(a,b)``` return the maximum of ```a``` and ```b```
 * ```sqrt(n)``` return the square root of ```n```
+* ```rint(n)``` round ```n``` to the closest integer, with ties rounding to the nearest even integer.
 * ```round(n)``` round ```n``` to the closest integer, with ties rounding up
+* ```sign(n)``` return -1 if the sign of n is negative, +1 if positive, 0 if zero.
 * ```toDegrees(r)``` convert radians ```r``` to degrees
 * ```toRadians(d)``` convert degrees ```d``` to radians
 * ```tan(a)``` return the trignometric tangent of ```a```

@@ -666,7 +666,7 @@ public class PublicAPITests {
         checkMath(evald, "b+exp(a)", b + Math.exp(a));
         checkMath(evald, "floor(a+b)", Math.floor(a + b));
         checkMath(evald, "hypot(a,b+c)", Math.hypot(a, b + c));
-        checkMath(evald, "log(a*b+c)", Math.log(a * b + c));
+        checkMath(evald, "log(a*c+b)", Math.log(a * c + b));
         checkMath(evald, "log10(a+b*c)", Math.log10(a + b * c));
         checkMath(evald, "max(b,c)", Math.max(b, c));
         checkMath(evald, "min(b-c, c-b)", Math.min(b - c, c - b));

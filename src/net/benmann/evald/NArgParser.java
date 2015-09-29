@@ -77,11 +77,6 @@ class NArgParser extends ValueParser {
 			throw new EvaldException("Missing closing brace for function " + token); //FIXME for function where?
 		}
 
-		while (args.size() < maxArguments) {
-			//pad with null
-			args.add(null);
-		}
-		
         return createFn.fn(args);
 	}
 }

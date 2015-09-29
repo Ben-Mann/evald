@@ -4,9 +4,47 @@ import java.util.List;
 
 public final class LibMath extends Library {
     @Override Parser[] getParsers() {
-        return new Parser[] { MOD, SIN, POW, E, PI, ABS, ACOS, ASIN, ATAN, ATAN2, CBRT, CEIL, COS, COSH, EXP, FLOOR, HYPOT, LOG, LOG10, MAX, MIN, RANDOM, ROUND, SINH, SQRT, TAN, TANH, TODEGREES, TORADIANS, SECANT, COSECANT, COTAN, ASINH, ACOSH, ATANH };
+        return new Parser[] { SIGN, LOG2, RINT, MOD, SIN, POW, E, PI, ABS, ACOS, ASIN, ATAN, ATAN2, CBRT, CEIL, COS, COSH, EXP, FLOOR, HYPOT, LOG, LOG10, MAX, MIN, RANDOM, ROUND, SINH, SQRT, TAN, TANH, TODEGREES, TORADIANS, SECANT, COSECANT, COTAN, ASINH, ACOSH, ATANH };
 	}
-	
+
+    public static final NArgParser SIGN = new NArgParser(1, new CreateNArgFunctionFn("sign") {
+        @Override protected ValueNode fn(List<Node> args) {
+            return new OneArgValueNode(token, args.get(0)) {
+                @Override protected double get() {
+                    double d = arg1.get();
+                    if (Double.isNaN(d))
+                        return Double.NaN;
+                    if (d < 0)
+                        return -1;
+                    if (d > 0)
+                        return 1;
+                    return 0;
+                }
+            };
+        }
+    });
+
+    public static final NArgParser LOG2 = new NArgParser(1, new CreateNArgFunctionFn("log2") {
+        final double log2value = Math.log(2);
+        @Override protected ValueNode fn(List<Node> args) {
+            return new OneArgValueNode(token, args.get(0)) {
+                @Override protected double get() {
+                    return Math.log(arg1.get()) / log2value;
+                }
+            };
+        }
+    });
+
+    public static final NArgParser RINT = new NArgParser(1, new CreateNArgFunctionFn("rint") {
+        @Override protected ValueNode fn(List<Node> args) {
+            return new OneArgValueNode(token, args.get(0)) {
+                @Override protected double get() {
+                    return Math.rint(arg1.get());
+                }
+            };
+        }
+    });
+
     public static final NArgParser TAN = new NArgParser(1, new CreateNArgFunctionFn("tan") {
         @Override protected ValueNode fn(List<Node> args) {
             return new OneArgValueNode(token, args.get(0)) {

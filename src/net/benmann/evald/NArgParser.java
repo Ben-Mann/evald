@@ -18,7 +18,7 @@ class NArgParser extends ValueParser {
     NArgParser(int minArguments, int maxArguments, CreateNArgFunctionFn createFn) {
         super(createFn.token);
         assert (maxArguments == NO_MAX || minArguments <= maxArguments);
-        pattern = Pattern.compile("^(\\s*" + Pattern.quote(token) + "\\()");
+        pattern = Pattern.compile("^(\\s*" + Pattern.quote(token) + "\\s*\\()");
 		this.minArguments = minArguments;
 		this.maxArguments = maxArguments;
 		this.createFn = createFn;

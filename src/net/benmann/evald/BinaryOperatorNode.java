@@ -3,12 +3,10 @@ package net.benmann.evald;
 abstract class BinaryOperatorNode extends OperatorNode {
     Node a;
     final Precedence precedence;
-    final String token;
 
     BinaryOperatorNode(String token, Precedence precedence) {
-        super(false);
+        super(token, false);
         this.precedence = precedence;
-        this.token = token;
     }
 
     @Override int getPrecedence() {

@@ -13,7 +13,7 @@ enum Precedence {
     SHIFT,
     ADDITIVE,
     MULTIPLICATIVE,
-    POWER,
 	PREFIX,
-	POSTFIX;
+	POSTFIX,
+	POWER;
 }

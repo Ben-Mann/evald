@@ -64,8 +64,8 @@ class ExpressionParser {
             node = Variable.parser.parse(this, expression);
             if (node == null)
                 return false;
-            //If expression starts with ( and node is a Variable, then we've read an undefined method.
-            if (!expression.expression.isEmpty() && expression.expression.charAt(0) == '(')
+            //If expression starts with (, implicit multiplication is disabled, and node is a Variable, then we've read an undefined method.
+            if (!expression.expression.isEmpty() && !evald.getImplicitMultiplication() && expression.expression.charAt(0) == '(')
                 throw new UnknownMethodEvaldException(preParse);
         }
 
@@ -211,6 +211,9 @@ class ExpressionParser {
 
         if (!expression.expression.isEmpty())
             throw new EmptyExpressionEvaldException(expression);
+
+        if (lastOperator != null)
+            throw new EvaldException("Expected a value after " + lastOperator.token);
 
         assert (root != null);
         root = collapse(root);

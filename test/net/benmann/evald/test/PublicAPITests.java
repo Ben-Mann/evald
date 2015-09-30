@@ -82,6 +82,8 @@ public class PublicAPITests {
         evald.addVariable("b", 3.0);
         evald.addVariable("c", 7.0);
         assertEquals(2.0 + (3.0 * 7.0), evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("-a^2");
+        assertEquals(-Math.pow(2, 2), evald.evaluate(), DEFAULT_PRECISION);
     }
 
     @Test public void testPrefix() {
@@ -117,6 +119,7 @@ public class PublicAPITests {
         evald.addVariable("y", 0.35);
         assertEquals(Math.cos(0.74) * Math.sin(0.35), evald.evaluate(), DEFAULT_PRECISION);
         evald.removeLibrary(Library.MATH);
+        evald.setImplicitMultiplication(false);
         try {
             evald.parse("cos(x)");
             fail();
@@ -129,6 +132,20 @@ public class PublicAPITests {
         } catch (Throwable t) {
             assertThat(t, instanceOf(UnknownMethodEvaldException.class));
         }
+        evald.setImplicitMultiplication(true);
+        evald.setAllowUndeclared(false);
+        try {
+            evald.parse("cos(x)");
+            fail();
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(UndeclaredVariableEvaldException.class));
+            assertTrue(t.getMessage().contains("cos"));
+        }
+    }
+
+    @Test public void testSpaceAfterFunctionName() {
+        Evald evald = new Evald(Library.CORE, Library.LOGIC, Library.MATH);
+        evald.parse("if ( isnan ( v1 ) , v2 , nan )");
     }
 
     @Test public void testPow() {
@@ -150,10 +167,12 @@ public class PublicAPITests {
                 return value + 2;
             }
         });
-        evald.parse("x * foo(y)");
+        evald.parse("x * foo(y) + 4");
         evald.addVariable("x", 0.1);
         evald.addVariable("y", 0.7);
-        assertEquals(0.1 * (0.7 + 2), evald.evaluate(), DEFAULT_PRECISION);
+        assertEquals(0.1 * (0.7 + 2) + 4, evald.evaluate(), DEFAULT_PRECISION);
+        //fail if user functions are persisting state.
+        assertEquals(0.1 * (0.7 + 2) + 4, evald.evaluate(), DEFAULT_PRECISION);
         try {
             evald.parse("x * foo(y,z)");
             fail();
@@ -216,11 +235,19 @@ public class PublicAPITests {
 
     @Test public void testMissingLibrary() {
         Evald evald = new Evald();
+        evald.setImplicitMultiplication(false);
         try {
             evald.parse("x * pow(y, z)");
             fail();
         } catch (Throwable t) {
-            assertThat(t, instanceOf(UnknownMethodEvaldException.class));
+            assertThat(t, instanceOf(UnknownMethodEvaldException.class)); //Expected a method "pow"
+        }
+        evald.setImplicitMultiplication(true);
+        try {
+            evald.parse("x * pow(y, z)");
+            fail();
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(EvaldException.class)); //Expected a variable "pow"
         }
     }
 
@@ -239,6 +266,39 @@ public class PublicAPITests {
         assertTrue(vars.contains("def"));
         assertTrue(vars.contains("g"));
         assertTrue(vars.contains("h"));
+    }
+
+    @Test public void addVariableAfterParsing() {
+        Evald evald = new Evald();
+        int xi = evald.addVariable("xxxx");
+        evald.parse("xxxx * yyyy");
+        int yi = evald.addVariable("yyyy");
+        int zi = evald.addVariable("zzzz");
+        evald.setVariable(xi, 0.5);
+        evald.setVariable(yi, 2.0);
+        evald.setVariable(zi, 5.0);
+        double result = evald.evaluate();
+        assertEquals(2.0 * 0.5, result, DEFAULT_PRECISION);
+    }
+
+    @Test public void testParseInvalid() {
+        Evald evald = new Evald();
+        try {
+            evald.parse("c *");
+            fail();
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(EvaldException.class));
+            assertEquals("Expected a value after *", t.getMessage());
+        }
+
+        evald = new Evald();
+        try {
+            evald.parse("* b");
+            fail();
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(EvaldException.class));
+            assertEquals("Expected a value or expression at * b", t.getMessage());
+        }
     }
 
     @Test public void testMissingVariable() {
@@ -278,6 +338,10 @@ public class PublicAPITests {
         assertEquals(2.0 * 3.0, evald.evaluate(), DEFAULT_PRECISION);
         evald.parse(".75a");
         assertEquals(2 * 0.75, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a (b+1)");
+        assertEquals(2 * (3 + 1), evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("a(b+1)");
+        assertEquals(2 * (3 + 1), evald.evaluate(), DEFAULT_PRECISION);
 
     }
 
@@ -458,11 +522,13 @@ public class PublicAPITests {
         //won't affect evaluation of existing expression
         assertEquals(2 * Math.sin(45), evald.evaluate(), DEFAULT_PRECISION);
         //will effect parsing
+        evald.setAllowUndeclared(false);
         try {
             evald.parse("2*sin(a)");
             fail();
         } catch (Throwable t) {
-            assertThat(t, instanceOf(UnknownMethodEvaldException.class));
+            assertThat(t, instanceOf(UndeclaredVariableEvaldException.class));
+            assertTrue(t.getMessage().contains("sin"));
         }
     }
 

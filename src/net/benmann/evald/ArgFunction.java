@@ -10,44 +10,57 @@ import java.util.List;
  * ({@link OneArgFunction}, {@link TwoArgFunction}, {@link ThreeArgFunction} and {@link NArgFunction})
  * also provide a simplified interface for implementing custom functions, as there is no need to call {@link Node#get()}
  */
-public abstract class ArgFunction extends ValueNode {
+public abstract class ArgFunction {
     final int minArgs;
     final int maxArgs;
-    protected Node[] inputs;
-    protected double[] values;
     final String token;
 
     protected ArgFunction(String token, int minArgs, int maxArgs) {
-        super(false);
         this.minArgs = minArgs;
         this.maxArgs = maxArgs;
         this.token = token;
     }
 
-    void set(List<Node> inputs) {
-        this.inputs = inputs.toArray(new Node[] {});
-        values = new double[inputs.size()];
+    abstract protected double get(Node[] inputs, double[] values);
+
+    ValueNode createNode(final List<Node> args) {
+        return new FunctionValueNode(args);
     }
 
-    @Override final Node collapse() {
-        boolean allConstant = true;
-        for (int i = 0; i < inputs.length; i++) {
-            inputs[i] = inputs[i].collapse();
-            if (!inputs[i].isConstant)
-                allConstant = false;
-        }
-        if (!allConstant)
-            return this;
-        return new Constant(get());
-    }
+    private class FunctionValueNode extends ValueNode {
+        protected Node[] inputs;
+        protected double[] values;
 
-    @Override String toTree(String prefix) {
-        StringBuilder sb = new StringBuilder();
-        sb.append(prefix).append("UserFn ").append(token).append("\n");
-        for (Node input : inputs) {
-            sb.append(input.toTree(prefix + "  "));
+        public FunctionValueNode(final List<Node> args) {
+            super(false);
+            inputs = args.toArray(new Node[] {});
+            values = new double[args.size()];
         }
-        return sb.toString();
+
+        @Override final Node collapse() {
+            boolean allConstant = true;
+            for (int i = 0; i < inputs.length; i++) {
+                inputs[i] = inputs[i].collapse();
+                if (!inputs[i].isConstant)
+                    allConstant = false;
+            }
+            if (!allConstant)
+                return this;
+            return new Constant(get());
+        }
+
+        @Override String toTree(String prefix) {
+            StringBuilder sb = new StringBuilder();
+            sb.append(prefix).append("UserFn ").append(token).append("\n");
+            for (Node input : inputs) {
+                sb.append(input.toTree(prefix + "  "));
+            }
+            return sb.toString();
+        }
+
+        @Override protected double get() {
+            return ArgFunction.this.get(inputs, values);
+        }
     }
 
     /**
@@ -84,7 +97,7 @@ public abstract class ArgFunction extends ValueNode {
             super(token, minArgs, maxArgs);
         }
 
-        @Override protected double get() {
+        @Override protected double get(Node[] inputs, double[] values) {
             for (int i = 0; i < inputs.length; i++) {
                 values[i] = inputs[i].get();
             }
@@ -118,7 +131,7 @@ public abstract class ArgFunction extends ValueNode {
             super(token, 1, 1);
         }
 
-        @Override protected double get() {
+        @Override protected double get(Node[] inputs, double[] values) {
             return get(inputs[0].get());
         }
 
@@ -149,7 +162,7 @@ public abstract class ArgFunction extends ValueNode {
             super(token, 2, 2);
         }
 
-        @Override protected double get() {
+        @Override protected double get(Node[] inputs, double[] values) {
             return get(inputs[0].get(), inputs[1].get());
         }
 
@@ -182,7 +195,7 @@ public abstract class ArgFunction extends ValueNode {
             super(token, 3, 3);
         }
 
-        @Override protected double get() {
+        @Override protected double get(Node[] inputs, double[] values) {
             return get(inputs[0].get(), inputs[1].get(), inputs[2].get());
         }
 

@@ -22,6 +22,7 @@ public class Evald {
     private boolean implicitMultiplication = true;
     private boolean allowMultiplePostfixOperators = true;
     private static final Pattern validTokenPattern = Pattern.compile("^[a-zA-Z_][a-zA-Z_0-9]*$");
+    private static final int ARRAY_RESIZE_BUFFER = 16;
 
     private final List<Double> valueList = new ArrayList<Double>();
     private double[] valueArray;
@@ -195,11 +196,20 @@ public class Evald {
             result = valueList.size();
             keyIndexMap.put(token, result);
             valueList.add(value);
+
+            if (valueArray != null && valueArray.length <= result) {
+                double[] oldValues = valueArray;
+                valueArray = new double[result + ARRAY_RESIZE_BUFFER];
+                System.arraycopy(oldValues, 0, valueArray, 0, oldValues.length);
+                for (SetValueArrayCallback callback : valueArrayCallbacks) {
+                    callback.setValueArray(valueArray);
+                }
+            }
         } else {
         	valueList.set(result, value);
-            if (valueArray.length > result) {
-                valueArray[result] = value;
-            }
+        }
+        if (valueArray != null) {
+            valueArray[result] = value;
         }
         return result;
     }
@@ -387,8 +397,7 @@ public class Evald {
 
         valueParsers.add(new NArgParser(function.minArgs, function.maxArgs, new CreateNArgFunctionFn(function.token) {
     		@Override public ValueNode fn(List<Node> args) {
-                function.set(args);
-    			return function;
+                return function.createNode(args);
     		}
     	}));
 	}

@@ -1,11 +1,8 @@
 package net.benmann.evald;
 
 abstract class PostfixOperatorNode extends UnaryOperatorNode {
-    final String token;
-
     PostfixOperatorNode(String token) {
-        super(false);
-        this.token = token;
+        super(token, false);
     }
 
 	@Override int getPrecedence() {

@@ -14,30 +14,44 @@ public abstract class ArgFunction {
     final int minArgs;
     final int maxArgs;
     final String token;
+    final boolean isPure;
 
-    protected ArgFunction(String token, int minArgs, int maxArgs) {
+    protected ArgFunction(String token, int minArgs, int maxArgs, boolean isPure) {
         this.minArgs = minArgs;
         this.maxArgs = maxArgs;
         this.token = token;
+        this.isPure = isPure;
     }
 
     abstract protected double get(Node[] inputs, double[] values);
 
     ValueNode createNode(final List<Node> args) {
-        return new FunctionValueNode(args);
+        if (isPure)
+            return new PureFunctionValueNode(args);
+        return new ImpureFunctionValueNode(args);
     }
 
-    private class FunctionValueNode extends ValueNode {
+    private class ImpureFunctionValueNode extends PureFunctionValueNode {
+        public ImpureFunctionValueNode(final List<Node> args) {
+            super(args);
+        }
+
+        @Override Node collapse() {
+            return this;
+        }
+    }
+
+    private class PureFunctionValueNode extends ValueNode {
         protected Node[] inputs;
         protected double[] values;
 
-        public FunctionValueNode(final List<Node> args) {
+        public PureFunctionValueNode(final List<Node> args) {
             super(false);
             inputs = args.toArray(new Node[] {});
             values = new double[args.size()];
         }
 
-        @Override final Node collapse() {
+        @Override Node collapse() {
             boolean allConstant = true;
             for (int i = 0; i < inputs.length; i++) {
                 inputs[i] = inputs[i].collapse();
@@ -80,7 +94,7 @@ public abstract class ArgFunction {
          *            the token to be used. Must be a valid token (start with [a-zA-Z_], contain only [a-zA-Z0-9_])
          */
         public NArgFunction(String token) {
-            super(token, 0, NArgParser.NO_MAX);
+            this(token, 0, NArgParser.NO_MAX);
         }
 
         /**
@@ -94,7 +108,63 @@ public abstract class ArgFunction {
          *            maximum legal number of arguments, or {@link Parser#NO_MAX} if the maximum is unlimited.
          */
         public NArgFunction(String token, int minArgs, int maxArgs) {
-            super(token, minArgs, maxArgs);
+            super(token, minArgs, maxArgs, true);
+        }
+
+        @Override protected double get(Node[] inputs, double[] values) {
+            for (int i = 0; i < inputs.length; i++) {
+                values[i] = inputs[i].get();
+            }
+            return get(values);
+        }
+
+        /**
+         * Return the result of a custom function given the supplied arguments.
+         * 
+         * @param args
+         *            A variable number of arguments, as supplied in the expression. Note that values may also be Inf, NaN or null.
+         * @return the result of the custom function.
+         */
+        abstract protected double get(double... args);
+    }
+
+    /**
+     * An {@link ArgFunction} which allows for impure (non-deterministic) vararg functions.
+     * 
+     * Override the {@link #get(double...)} method to implement desired custom functionality.
+     * If a limited number of arguments are required, it's possible to throw an exception from {@link #get(double...)},
+     * which will detect the argument mismatch on a call to {@link Evald#evaluate()}.
+     * A better option is to use {@link OneArgFunction}, {@link TwoArgFunction} or {@link ThreeArgFunction},
+     * which will raise a parse exception on the earlier call to {@link Evald#parse(String)}.
+     * 
+     * Note that compared to {@link NArgFunction}, this version will not benefit from up-front
+     * expression optimisation, and is useful when the implemented function may provide different
+     * output given the same input. An example is a customised method using an external
+     * data source or implementing a random number generator.
+     */
+    static abstract public class ImpureNArgFunction extends ArgFunction {
+        /**
+         * Construct a function evaluator that takes multiple arguments
+         * 
+         * @param token
+         *            the token to be used. Must be a valid token (start with [a-zA-Z_], contain only [a-zA-Z0-9_])
+         */
+        public ImpureNArgFunction(String token) {
+            this(token, 0, NArgParser.NO_MAX);
+        }
+
+        /**
+         * Construct a function evaluator that takes multiple arguments
+         * 
+         * @param token
+         *            the token to be used. Must be a valid token (start with [a-zA-Z_], contain only [a-zA-Z0-9_])
+         * @param minArgs
+         *            minimum legal number of arguments.
+         * @param maxArgs
+         *            maximum legal number of arguments, or {@link Parser#NO_MAX} if the maximum is unlimited.
+         */
+        public ImpureNArgFunction(String token, int minArgs, int maxArgs) {
+            super(token, minArgs, maxArgs, false);
         }
 
         @Override protected double get(Node[] inputs, double[] values) {
@@ -128,7 +198,7 @@ public abstract class ArgFunction {
          *            the token to be used. Must be a valid token (start with [a-zA-Z_], contain only [a-zA-Z0-9_])
          */
         public OneArgFunction(String token) {
-            super(token, 1, 1);
+            super(token, 1, 1, true);
         }
 
         @Override protected double get(Node[] inputs, double[] values) {
@@ -159,7 +229,7 @@ public abstract class ArgFunction {
          *            the token to be used. Must be a valid token (start with [a-zA-Z_], contain only [a-zA-Z0-9_])
          */
         public TwoArgFunction(String token) {
-            super(token, 2, 2);
+            super(token, 2, 2, true);
         }
 
         @Override protected double get(Node[] inputs, double[] values) {
@@ -192,7 +262,7 @@ public abstract class ArgFunction {
          *            the token to be used. Must be a valid token (start with [a-zA-Z_], contain only [a-zA-Z0-9_])
          */
         public ThreeArgFunction(String token) {
-            super(token, 3, 3);
+            super(token, 3, 3, true);
         }
 
         @Override protected double get(Node[] inputs, double[] values) {

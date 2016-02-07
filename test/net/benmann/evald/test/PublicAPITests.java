@@ -12,6 +12,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
 
+import net.benmann.evald.ArgFunction.ImpureNArgFunction;
 import net.benmann.evald.ArgFunction.NArgFunction;
 import net.benmann.evald.ArgFunction.OneArgFunction;
 import net.benmann.evald.ArgFunction.TwoArgFunction;
@@ -217,6 +218,17 @@ public class PublicAPITests {
         evald.addVariable("d", 5.0);
         evald.addVariable("e", 7.0);
         assertEquals(0.1 * (0.7 + 2.0 + 3.0 + 5.0 + 7.0), evald.evaluate(), DEFAULT_PRECISION);
+    }
+
+    @Test public void testImpureNArgFunction() {
+        Evald evald = new Evald();
+        evald.addUserFunction(new ImpureNArgFunction("randfn", 0, 0) {
+            @Override public double get(double... values) {
+                return Math.random();
+            }
+        });
+        evald.parse("2 * randfn()");
+        assertNotEquals(evald.evaluate(), evald.evaluate(), DEFAULT_PRECISION);
     }
 
     @Test public void testTwoArgFunction() {
@@ -737,7 +749,7 @@ public class PublicAPITests {
         checkMath(evald, "max(b,c)", Math.max(b, c));
         checkMath(evald, "min(b-c, c-b)", Math.min(b - c, c - b));
         //random's a bit different...
-        evald.parse("random()");
+        evald.parse("2*random()");
         double x = evald.evaluate();
         //FIXME There's a small chance this can fail. Is there a better way?
         assertNotEquals(x, evald.evaluate(), DEFAULT_PRECISION);

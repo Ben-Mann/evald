@@ -8,7 +8,6 @@ import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
  */
 public class Evald extends AbstractEvald {
 
-
     private Node root;
 
     /**

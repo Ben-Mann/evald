@@ -9,7 +9,7 @@ class Variable extends ValueNode {
 
     //how about: when we do parse(), we allocate the evald valuelist, because we know which variables
     //are used in THIS expression, and can pre-allocate them. Then, after the allocation
-    Variable(Evald evald, int index) {
+    Variable(AbstractEvald evald, int index) {
         super(false);
         evald.addValueArrayCallback(new SetValueArrayCallback() {
             @Override void setValueArray(double[] valueArray) {

@@ -9,9 +9,9 @@ import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
 
 class ExpressionParser {
     private ExpressionString expression;
-    final Evald evald;
+    final AbstractEvald evald;
 
-    ExpressionParser(Evald evald, ExpressionString expression) {
+    ExpressionParser(AbstractEvald evald, ExpressionString expression) {
         this.expression = expression;
         this.evald = evald;
     }
@@ -102,10 +102,8 @@ class ExpressionParser {
         } else {
                 throw new EvaldException("The postfix operator "+parser.token+" requires an lvalue.");
         }
-            
-        if (root == null) {
-            assert (false); //should have been caught by the lastValue/lastOperator above.
-        }
+
+        assert(root != null); //should have been caught by the lastValue/lastOperator above.
         
         node.b = b;
         node.parent = b.parent;

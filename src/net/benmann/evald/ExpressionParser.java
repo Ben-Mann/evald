@@ -1,5 +1,7 @@
 package net.benmann.evald;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -10,12 +12,16 @@ import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
 class ExpressionParser {
     private ExpressionString expression;
     final Evald evald;
+    final Set<Integer> usedIndices = new HashSet<>();
 
     ExpressionParser(Evald evald, ExpressionString expression) {
         this.expression = expression;
         this.evald = evald;
     }
 
+    void addUsedIndex(int index) {
+        usedIndices.add(index);
+    }
 
     Node parse(String expression) {
         return new ExpressionParser(evald, new ExpressionString(expression)).parse();

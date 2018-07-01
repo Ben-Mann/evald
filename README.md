@@ -62,6 +62,64 @@ evald.parse("v * (sin(toRadians(90))^2) + 1");
 
 is, on parsing, reduced to ```v + 1``` (as ```sin(toRadians(90))``` evaluates to ```1```; ```1^2``` evaluates to ```1```, and ```v*1``` optimises to ```v```)
 
+## Multiple Expressions
+Evald supports evaluation of multiple expressions, creating multiple outputs, and manages expression dependencies for you.
+
+Each expression must be of the format [variable] = [expression] and a semicolon must be provided before specifying another expression. That is, the following is legal:
+
+```java
+x = (a + b + a * b) / (a + 2 * b) / b;
+y = (a + 2 * b) / (a + b + a * b) / a;
+out1 = 2 * x * y; out2 = 2 / x / y;
+```
+
+and creates a sequence of expressions which require two inputs `a` and `b`, and which creates four intermediate or output variables - `x`, `y`, `out1` and `out2`.
+
+The expression can be evaluated identically to those above, however note that the `evaluate()` method will return the _last_ expression result (`out2` in this case). To retrieve multiple outputs from the expression you can request the variable's value directly.
+
+```java
+//get out1 using a hashmap lookup internally
+double out1Value = evald.getVariableValue("out1");
+//or, record the index of a variable up front, and then later get its value by index without the hash lookup penalty
+int ix = evald.getVariableIndex("x");
+double xValue = evald.getVariableValue("x");
+```
+
+### Only Execute Needed Expressions
+If you know which outputs you need from an expression, it's most efficient to declare these up front. In the example above, if we only need `x` and `y`, there's no need to compute `out1` or `out2`.
+
+```java
+evald.enableOutputs("x", "y");
+//Now, when we call evald.evaluate(), the out1 and out2 expressions will be bypassed
+```
+
+You can supply either tokens or indices to `enableOutputs`; note also that you can clear these optimisations with `enableAllOutputs`.
+
+```java
+//If you needed to repeatedly change the output this will avoid a hash table lookup
+evald.enableOutputs(out1Index);
+//And to eventually simply output everything:
+evald.enableAllOutputs();
+```
+
+### Inputs vs Intermediate & Output variables
+Callers may wish to validate all inputs have been provided, or to provide the user with a list of possible outputs. These can be obtained via `listAllInputs()` and `listAllOutputOrIntermediateVariables()`. Note that the order of tokens returned is not guaranteed.
+
+```java
+//From the example above, returns an array containing "a" and "b".
+String[] allInputs = evald.listAllInputs();
+//From the example above, returns an array containing "x", "y", "out1" and "out2".
+//There is no way for Evald to know which variables the user really wants as an output
+String[] availableOutputs = evald.listAllOutputOrIntermediateVariables();
+```
+
+Note that at present, if a variable is reused but required as an input then these methods will list it only as an input. In the following example, `w` is an output, and `a` is an input.
+
+```java
+w = a + 3;
+a = w * 2;
+```
+
 ## Libraries
 Built-in functions are associated into libraries. 
 

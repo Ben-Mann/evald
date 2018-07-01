@@ -4,6 +4,7 @@ import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
@@ -11,6 +12,11 @@ import static org.junit.Assert.fail;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.hamcrest.CoreMatchers;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
 import net.benmann.evald.ArgFunction.ImpureNArgFunction;
 import net.benmann.evald.ArgFunction.NArgFunction;
@@ -21,14 +27,14 @@ import net.benmann.evald.EvaldException;
 import net.benmann.evald.EvaldException.InvalidTokenEvaldException;
 import net.benmann.evald.EvaldException.OperatorExpectedEvaldException;
 import net.benmann.evald.EvaldException.UndeclaredVariableEvaldException;
+import net.benmann.evald.EvaldException.UninitialisedEvaldException;
 import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
 import net.benmann.evald.Library;
 
-import org.hamcrest.CoreMatchers;
-import org.junit.Test;
-
 public class PublicAPITests {
     static final double DEFAULT_PRECISION = 0.00001;
+
+    @Rule public ExpectedException thrown = ExpectedException.none();
 
     @Test public void testEmptyExpression() {
         Evald evald = new Evald();
@@ -813,4 +819,61 @@ public class PublicAPITests {
         assertTrue(vars.contains("c"));
         assertFalse(vars.contains("d"));
     }
+
+    private void assertContainsAll(String[] expect, String[] actual) {
+        assertNotNull(expect);
+        assertNotNull(actual);
+        assertTrue("Expected arrays to have the same length, but\n" + Arrays.toString(actual) + "\n doesn't match\n" + Arrays.toString(expect), expect.length == actual.length);
+        Set<String> expectSet = new HashSet<String>(Arrays.asList(expect));
+        expectSet.removeAll(Arrays.asList(actual));
+        assertTrue("The actual output didn't contain " + expectSet, expectSet.isEmpty());
+    }
+
+    @Test public void testUninitialised() {
+        thrown.expect(UninitialisedEvaldException.class);
+        Evald evald = new Evald();
+        evald.evaluate();
+    }
+
+    @Test public void testMultipleExpression() {
+        Evald evald = new Evald();
+        evald.parse("c = a ^ b;\nd = a * c");
+        assertContainsAll(new String[] { "a", "b", "c", "d" }, evald.listAllVariables());
+        assertContainsAll(new String[] { "a", "b" }, evald.listAllInputs());
+        assertContainsAll(new String[] { "c", "d" }, evald.listAllOutputOrIntermediateVariables());
+        int cIndex = evald.getVariableIndex("c");
+        double a = 7;
+        double b = 3;
+        evald.addVariable("a", a);
+        evald.addVariable("b", b);
+        double defaultEvaluateResult = evald.evaluate();
+        double dValue = evald.getVariableValue("d");
+        double cValue = evald.getVariableValue(cIndex);
+        assertEquals(cValue, Math.pow(a, b), DEFAULT_PRECISION);
+        assertEquals(dValue, Math.pow(a, b) * a, DEFAULT_PRECISION);
+        assertEquals(dValue, defaultEvaluateResult, DEFAULT_PRECISION);        
+    }
+
+    @Test public void testSingleExpressionDefaultToken() {
+        Evald evald = new Evald();
+        evald.parse("a * 2");
+        evald.addVariable("a", 2);
+        double result = evald.evaluate();
+        assertEquals(4, (int) result);
+        assertEquals(4, (int) evald.getVariableValue(evald.getDefaultResultToken()));
+        assertEquals("result", evald.getDefaultResultToken());
+        evald.setDefaultResultToken("d");
+        assertEquals("d", evald.getDefaultResultToken());
+        //Won't be usable immediately - expression must be re-parsed if we changed the default token.
+        try {
+            evald.getVariableValue("d");
+            fail("Expected this to fail.");
+        } catch (UndeclaredVariableEvaldException e) {
+            //Move on...
+        }
+        evald.parse("a * 2");
+        evald.evaluate();
+        assertEquals(4, (int) evald.getVariableValue("d"));
+    }
+
 }

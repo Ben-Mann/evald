@@ -1,24 +1,34 @@
 package net.benmann.evald;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.benmann.evald.EvaldException.EmptyExpressionEvaldException;
-import net.benmann.evald.EvaldException.OperatorExpectedEvaldException;
-import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
+import net.benmann.evald.AbstractEvaldException.EmptyExpressionEvaldException;
+import net.benmann.evald.AbstractEvaldException.EvaldException;
+import net.benmann.evald.AbstractEvaldException.OperatorExpectedEvaldException;
+import net.benmann.evald.AbstractEvaldException.UnknownMethodEvaldException;
 
 class ExpressionParser {
     private ExpressionString expression;
     final Evald evald;
+    final Set<Integer> usedIndices = new HashSet<>();
 
     ExpressionParser(Evald evald, ExpressionString expression) {
         this.expression = expression;
         this.evald = evald;
     }
 
+    void addUsedIndex(int index) {
+        usedIndices.add(index);
+    }
 
     Node parse(String expression) {
-        return new ExpressionParser(evald, new ExpressionString(expression)).parse();
+        ExpressionParser parser = new ExpressionParser(evald, new ExpressionString(expression));
+        Node node = parser.parse();
+        usedIndices.addAll(parser.usedIndices);
+        return node;
     }
     
     Node root;		//root node of the tree.

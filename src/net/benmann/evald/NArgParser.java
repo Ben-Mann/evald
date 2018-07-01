@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.benmann.evald.AbstractEvaldException.EvaldException;
+
 class NArgParser extends ValueParser {
 	final Pattern pattern;
 	final int minArguments;

@@ -4,19 +4,22 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 class Variable extends ValueNode {
+    /** Pattern for valid variable names */
+    public static Pattern pattern = Pattern.compile("^[a-zA-Z_][a-z_A-Z0-9]*");
+
     final int index;
     double[] values;
 
     //how about: when we do parse(), we allocate the evald valuelist, because we know which variables
     //are used in THIS expression, and can pre-allocate them. Then, after the allocation
-    Variable(Evald evald, int index) {
+    Variable(ExpressionParser parser, int index) {
         super(false);
-        evald.addValueArrayCallback(new SetValueArrayCallback() {
+        parser.evald.addValueArrayCallback(new SetValueArrayCallback() {
             @Override void setValueArray(double[] valueArray) {
                 values = valueArray;
             }
         });
-        evald.addUsedIndex(index);
+        parser.addUsedIndex(index);
         this.index = index;
     }
 
@@ -38,7 +41,6 @@ class Variable extends ValueNode {
         return sb.toString();
     }
 
-    static Pattern pattern = Pattern.compile("^[a-zA-Z_][a-z_A-Z0-9]*");
     static ValueParser parser = new ValueParser(null) {
         @Override ValueNode parse(ExpressionParser operationParser, ExpressionString str) {
             //Find a value
@@ -55,7 +57,7 @@ class Variable extends ValueNode {
             }
 
             str.update(content.length());
-            return new Variable(operationParser.evald, index);
+            return new Variable(operationParser, index);
         }
     };
 }

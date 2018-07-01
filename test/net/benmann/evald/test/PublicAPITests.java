@@ -8,22 +8,28 @@ import java.util.HashSet;
 import java.util.Set;
 
 import org.hamcrest.CoreMatchers;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.ExpectedException;
 
+import net.benmann.evald.AbstractEvaldException.EmptyExpressionEvaldException;
+import net.benmann.evald.AbstractEvaldException.EvaldException;
+import net.benmann.evald.AbstractEvaldException.InvalidTokenEvaldException;
+import net.benmann.evald.AbstractEvaldException.OperatorExpectedEvaldException;
+import net.benmann.evald.AbstractEvaldException.UndeclaredVariableEvaldException;
+import net.benmann.evald.AbstractEvaldException.UninitialisedEvaldException;
+import net.benmann.evald.AbstractEvaldException.UnknownMethodEvaldException;
 import net.benmann.evald.ArgFunction.ImpureNArgFunction;
 import net.benmann.evald.ArgFunction.NArgFunction;
 import net.benmann.evald.ArgFunction.OneArgFunction;
 import net.benmann.evald.ArgFunction.TwoArgFunction;
 import net.benmann.evald.Evald;
-import net.benmann.evald.EvaldException;
-import net.benmann.evald.EvaldException.InvalidTokenEvaldException;
-import net.benmann.evald.EvaldException.OperatorExpectedEvaldException;
-import net.benmann.evald.EvaldException.UndeclaredVariableEvaldException;
-import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
 import net.benmann.evald.Library;
 
 public class PublicAPITests {
     static final double DEFAULT_PRECISION = 0.00001;
+
+    @Rule public ExpectedException thrown = ExpectedException.none();
 
     @Test public void testEmptyExpression() {
         Evald evald = new Evald();
@@ -37,7 +43,7 @@ public class PublicAPITests {
             evald.parse("");
             fail();
         } catch (Throwable t) {
-            assertThat(t, instanceOf(EvaldException.class));
+            assertThat(t, instanceOf(EmptyExpressionEvaldException.class));
         }
     }
 
@@ -908,17 +914,13 @@ public class PublicAPITests {
     	Evald evald = new Evald();
     	int ia = evald.addVariable("a");
     	int ib = evald.addVariable("b");
-        try {
-            evald.setVariable(ia, (int) 1);
-            fail();
-        } catch (NullPointerException e) {
-            //Okay - because we've not parsed an expression yet.  
-        }
-        evald.parse("a*2");
         evald.setVariable(ia, (int) 1);
+        evald.parse("a*2");
+        assertEquals(2, evald.evaluate(), DEFAULT_PRECISION);
+        evald.setVariable(ia, (int) 3);
     	evald.setVariable(ib, 2.0f);
     	evald.parse("a*b");
-    	assertNotEquals(2, evald.evaluate(), DEFAULT_PRECISION);
+        assertEquals(6, evald.evaluate(), DEFAULT_PRECISION);
     }
 
     @Test public void testRemoveConstant() {
@@ -935,5 +937,110 @@ public class PublicAPITests {
         evald.removeConstant("nan");
         evald.parse("nan");
         assertEquals(1, evald.evaluate(), DEFAULT_PRECISION);
+    }
+
+    private void assertContainsAll(String[] expect, String[] actual) {
+        assertNotNull(expect);
+        assertNotNull(actual);
+        assertTrue("Expected arrays to have the same length, but\n" + Arrays.toString(actual) + "\n doesn't match\n" + Arrays.toString(expect), expect.length == actual.length);
+        Set<String> expectSet = new HashSet<String>(Arrays.asList(expect));
+        expectSet.removeAll(Arrays.asList(actual));
+        assertTrue("The actual output didn't contain " + expectSet, expectSet.isEmpty());
+    }
+
+    @Test public void testUninitialised() {
+        thrown.expect(UninitialisedEvaldException.class);
+        Evald evald = new Evald();
+        evald.evaluate();
+    }
+
+    @Test public void testMultipleExpression() {
+        Evald evald = new Evald();
+        evald.parse("c = a ^ b;\nd = a * c");
+        assertContainsAll(new String[] { "a", "b", "c", "d" }, evald.listAllVariables());
+        assertContainsAll(new String[] { "a", "b" }, evald.listAllInputs());
+        assertContainsAll(new String[] { "c", "d" }, evald.listAllOutputOrIntermediateVariables());
+        int cIndex = evald.getVariableIndex("c");
+        double a = 7;
+        double b = 3;
+        evald.addVariable("a", a);
+        evald.addVariable("b", b);
+        double defaultEvaluateResult = evald.evaluate();
+        double dValue = evald.getVariableValue("d");
+        double cValue = evald.getVariableValue(cIndex);
+        assertEquals(cValue, Math.pow(a, b), DEFAULT_PRECISION);
+        assertEquals(dValue, Math.pow(a, b) * a, DEFAULT_PRECISION);
+        assertEquals(dValue, defaultEvaluateResult, DEFAULT_PRECISION);        
+    }
+
+    @Test public void testSingleExpressionDefaultToken() {
+        Evald evald = new Evald();
+        evald.parse("a * 2");
+        evald.addVariable("a", 2);
+        double result = evald.evaluate();
+        assertEquals(4, (int) result);
+        assertEquals(4, (int) evald.getVariableValue(evald.getDefaultResultToken()));
+        assertEquals("result", evald.getDefaultResultToken());
+        evald.setDefaultResultToken("d");
+        assertEquals("d", evald.getDefaultResultToken());
+        //Won't be usable immediately - expression must be re-parsed if we changed the default token.
+        try {
+            evald.getVariableValue("d");
+            fail("Expected this to fail.");
+        } catch (UndeclaredVariableEvaldException e) {
+            //Move on...
+        }
+        evald.parse("a * 2");
+        evald.evaluate();
+        assertEquals(4, (int) evald.getVariableValue("d"));
+    }
+
+    @Test public void testMultiExpressionExceptions() {
+        Evald evald = new Evald();
+        try {
+            evald.parse("a * 2; b=a");
+            fail();
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(EvaldException.class));
+            assertTrue(t.getMessage().contains("Expected an assignment expression"));
+        }
+        evald.parse("b = a * 2;;c = b*b");
+        try {
+            evald.enableOutputs("q");
+            fail();
+        } catch (Throwable t) {
+            assertThat(t, instanceOf(UndeclaredVariableEvaldException.class));
+        }
+        evald.enableOutputs("b");
+        evald.addVariable("a", 3);
+        assertEquals(6, evald.evaluate(), DEFAULT_PRECISION);
+        assertEquals(6, evald.getVariableValue("b"), DEFAULT_PRECISION);
+    }
+
+    @Test public void testAddManyVariables() {
+        Evald evald = new Evald();
+        evald.parse("aa+bb");
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                String token = String.format("%c%c", 'a' + i, 'a' + j);
+                evald.addVariable(token, i * 10 + j);
+                System.err.println("Added " + token + " = " + (i * 10 + j));
+            }
+        }
+        for (int i = 0; i < 10; i++) {
+            for (int j = 0; j < 10; j++) {
+                assertEquals(i * 10 + j, evald.getVariableValue(String.format("%c%c", 'a' + i, 'a' + j)), DEFAULT_PRECISION);
+            }
+        }
+    }
+
+    @Test public void testMultiExpressionExceptionAmbiguity() {
+        Evald evald = new Evald();
+        try {
+            evald.parse("x = a + b;\ny = a * b;\nlen = sqrt(a^2+b^2);\nq = abc()");
+        } catch (EvaldException e) {
+            assertTrue(e.getMessage().contains("Syntax error in subexpression"));
+            assertTrue(e.getMessage().contains("abc"));
+        }
     }
 }

@@ -1,34 +1,64 @@
 package net.benmann.evald;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import net.benmann.evald.EvaldException.EmptyExpressionEvaldException;
-import net.benmann.evald.EvaldException.InvalidTokenEvaldException;
-import net.benmann.evald.EvaldException.UndeclaredVariableEvaldException;
-import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
+import net.benmann.evald.AbstractEvaldException.EmptyExpressionEvaldException;
+import net.benmann.evald.AbstractEvaldException.EvaldException;
+import net.benmann.evald.AbstractEvaldException.InvalidTokenEvaldException;
+import net.benmann.evald.AbstractEvaldException.UndeclaredVariableEvaldException;
+import net.benmann.evald.AbstractEvaldException.UninitialisedEvaldException;
+import net.benmann.evald.AbstractEvaldException.UnknownMethodEvaldException;
 
 /**
  * Double Expression Parser
  */
 public class Evald {
-    private Node root;
     private boolean allowUndeclared = true;
     private boolean implicitMultiplication = true;
     private boolean allowMultiplePostfixOperators = true;
     private static final Pattern validTokenPattern = Pattern.compile("^[a-zA-Z_][a-zA-Z_0-9]*$");
+    private static final Pattern subExpressionPattern = Pattern.compile("^\\s*([a-zA-Z_][a-z_A-Z0-9]*)\\s*=([^=]+.*)");
     private static final int ARRAY_RESIZE_BUFFER = 16;
+    private static final String DEFAULT_RESULT_VARIABLE = "result";
+    private String resultVariable = DEFAULT_RESULT_VARIABLE;
 
-    private final List<Double> valueList = new ArrayList<Double>();
     private double[] valueArray;
+    private String[] variableToken;
+    private int valueArraySize;
+    private Set<Integer> inputSet = new HashSet<>();
+
+    /**
+     * Track subexpression properties, primarily linking a variable to an expression.
+     * Also used to manage dependencies - if an output variable is to be ignored, then
+     * we can determine if it need not be evaluated at all.
+     */
+    private static class SubExpression {
+        int outputVariableIndex;
+        Node expressionRoot;
+        boolean enabled;
+        final Set<Integer> usedVariables;
+
+        SubExpression(int outputVariableIndex, Node expressionRoot, Set<Integer> usedVariables) {
+            this.outputVariableIndex = outputVariableIndex;
+            this.expressionRoot = expressionRoot;
+            this.usedVariables = usedVariables;
+            enabled = true;
+        }
+    }
+
+    final List<SubExpression> expressions = new ArrayList<>();
 
     final Map<String, Integer> keyIndexMap = new HashMap<String, Integer>();
     final Set<String> undeclaredKeyMap = new HashSet<String>();
+    final Set<String> outputKeyMap = new HashSet<String>();
     private final List<SetValueArrayCallback> valueArrayCallbacks = new ArrayList<SetValueArrayCallback>();
     private final Set<Integer> usedIndices = new HashSet<Integer>();
     private final Set<String> usedFunctions = new HashSet<String>();
@@ -96,18 +126,10 @@ public class Evald {
         valueArrayCallbacks.clear();
         usedIndices.clear();
         usedFunctions.clear();
+        inputSet.clear();
         
-        ExpressionString string = new ExpressionString(expression);
-        if (string.expression.isEmpty())
-            throw new EmptyExpressionEvaldException(string);
+        parseSubExpressions(expression);
 
-        root = new ExpressionParser(this, string).parse();
-
-        valueArray = new double[valueList.size()];
-        //transfer values
-        for (int i = 0; i < valueList.size(); i++) {
-            valueArray[i] = valueList.get(i);
-        }
         for (SetValueArrayCallback callback : valueArrayCallbacks) {
             callback.setValueArray(valueArray);
         }
@@ -116,6 +138,55 @@ public class Evald {
         	return;
         
         throw new UndeclaredVariableEvaldException(undeclaredKeyMap);
+    }
+
+    private void parseSubExpressions(String expression) {
+        expressions.clear();
+        String[] statements = expression.split(";");
+        if (statements.length == 1) {
+            if (!subExpressionPattern.matcher(statements[0]).find()) {
+                parseSubExpression(resultVariable + " = " + statements[0], false);
+                return;
+            }
+        }
+        for (String statement : statements) {
+            statement = statement.trim();
+            if (statement.isEmpty()) {
+                continue;
+            }
+            parseSubExpression(statement, true);
+        }
+    }
+
+    private void parseSubExpression(String subExpression, boolean includeContext) {
+        try {
+            Matcher matcher = subExpressionPattern.matcher(subExpression);
+            if (!matcher.find() || matcher.groupCount() != 2) {
+                throw new EvaldException("Expected an assignment expression.");
+            }
+
+            String variable = matcher.group(1);
+            String expression = matcher.group(2);
+
+            ExpressionString string = new ExpressionString(expression);
+            if (string.expression.isEmpty())
+                throw new EmptyExpressionEvaldException(string);
+
+            int index = addVariable(variable);
+            usedIndices.add(index);
+            ExpressionParser parser = new ExpressionParser(this, string);
+            Node root = parser.parse();
+            Set<Integer> newInputs = new HashSet<Integer>(parser.usedIndices);
+            newInputs.removeAll(usedIndices);
+            usedIndices.addAll(parser.usedIndices);
+            inputSet.addAll(newInputs);
+            expressions.add(new SubExpression(index, root, parser.usedIndices));
+        } catch (AbstractEvaldException e) {
+            if (!includeContext) {
+                throw e;
+            }
+            throw e.withContext(subExpression);
+        }
     }
 
     /**
@@ -127,7 +198,34 @@ public class Evald {
      *             if an operation is attempted on a null variable.
      */
     public double evaluate() {
-        return root.get();
+        if (expressions.isEmpty()) {
+            throw new UninitialisedEvaldException("Parser not initialised");
+        }
+        double result = 0;
+        for (SubExpression expression : expressions) {
+            if (!expression.enabled) {
+                continue;
+            }
+            result = expression.expressionRoot.get();
+            valueArray[expression.outputVariableIndex] = result;
+        }
+        return result;
+    }
+
+    public int getVariableIndex(String token) {
+        Integer result = keyIndexMap.get(token);
+        if (result == null) {
+            throw new UndeclaredVariableEvaldException(token);
+        }
+        return result;
+    }
+
+    public double getVariableValue(int index) {
+        return valueArray[index];
+    }
+
+    public double getVariableValue(String token) {
+        return valueArray[getVariableIndex(token)];
     }
 
     /**
@@ -193,25 +291,34 @@ public class Evald {
 
         Integer result = keyIndexMap.get(token);
         if (result == null) {
-            result = valueList.size();
+            result = valueArraySize++;
             keyIndexMap.put(token, result);
-            valueList.add(value);
-
-            if (valueArray != null && valueArray.length <= result) {
-                double[] oldValues = valueArray;
-                valueArray = new double[result + ARRAY_RESIZE_BUFFER];
-                System.arraycopy(oldValues, 0, valueArray, 0, oldValues.length);
-                for (SetValueArrayCallback callback : valueArrayCallbacks) {
-                    callback.setValueArray(valueArray);
-                }
-            }
-        } else {
-        	valueList.set(result, value);
+            validateValueArrayIndex(result);
+            variableToken[result] = token;
         }
-        if (valueArray != null) {
-            valueArray[result] = value;
-        }
+        valueArray[result] = value;
         return result;
+    }
+
+    private void validateValueArrayIndex(int index) {
+        if (valueArray != null && index < valueArray.length) {
+            return;
+        }
+        if (valueArray == null) {
+            valueArray = new double[ARRAY_RESIZE_BUFFER];
+            variableToken = new String[ARRAY_RESIZE_BUFFER];
+        } else if (valueArray.length <= index) {
+            double[] oldValues = valueArray;
+            String[] oldTokens = variableToken;
+            int newSize = index + ARRAY_RESIZE_BUFFER;
+            valueArray = new double[newSize];
+            variableToken = new String[newSize];
+            System.arraycopy(oldValues, 0, valueArray, 0, oldValues.length);
+            System.arraycopy(oldTokens, 0, variableToken, 0, oldTokens.length);
+        }
+        for (SetValueArrayCallback callback : valueArrayCallbacks) {
+            callback.setValueArray(valueArray);
+        }
     }
 
     /**
@@ -305,7 +412,80 @@ public class Evald {
      * List all variables currently defined in this Evald instance
      */
     public String[] listAllVariables() {
-        return keyIndexMap.keySet().toArray(new String[] {});
+        String[] result = new String[valueArraySize];
+        System.arraycopy(variableToken, 0, result, 0, valueArraySize);
+        return result;
+    }
+
+    private String[] tokensFromIndices(Collection<Integer> indices) {
+        List<String> tokens = new ArrayList<>(indices.size());
+        for (Integer index : indices) {
+            tokens.add(variableToken[index]);
+        }
+        return tokens.toArray(new String[] {});
+    }
+
+    /**
+     * List all variables used by this expression which are not defined by the expression itself
+     */
+    public String[] listAllInputs() {
+        return tokensFromIndices(inputSet);
+    }
+
+    /**
+     * List all variables set by this expression, which are not also a required input
+     */
+    public String[] listAllOutputOrIntermediateVariables() {
+        Set<Integer> indices = new HashSet<>(usedIndices);
+        indices.removeAll(inputSet);
+        return tokensFromIndices(indices);
+    }
+
+    /**
+     * Sets which output variables (from {@link #listAllOutputOrIntermediateVariables()}) are actually needed by the caller.
+     * Causes the evaluator to disable any output or intermediate variable which is not required for these outputs.
+     * 
+     * @param outputs
+     *            an array of variable tokens specifying the outputs to enable. The array must not be empty.
+     */
+    public void enableOutputs(String... outputToken) {
+        int[] outputIndex = new int[outputToken.length];
+        for (int i = 0; i < outputToken.length; i++) {
+            Integer index = keyIndexMap.get(outputToken[i]);
+            if (index == null) {
+                throw new UndeclaredVariableEvaldException(outputToken[i]);
+            }
+            outputIndex[i] = index;
+        }
+        enableOutputs(outputIndex);
+    }
+
+    /**
+     * Sets which output variables (from {@link #listAllOutputOrIntermediateVariables()}) are actually needed by the caller.
+     * Causes the evaluator to disable any output or intermediate variable which is not required for these outputs.
+     * 
+     * @param outputs
+     *            an array of variable indices specifying the outputs to enable. The array must not be empty.
+     */
+    public void enableOutputs(int... outputIndex) {
+        int len = expressions.size() - 1;
+        Set<Integer> required = new HashSet<>();
+        for (int index : outputIndex) {
+            required.add(index);
+        }
+        for(int i = len; i >= 0; i--) {
+            SubExpression expression = expressions.get(i);
+            expression.enabled = required.contains(expression.outputVariableIndex);
+            if (expression.enabled) {
+                required.addAll(expression.usedVariables);
+            }
+        }
+    }
+
+    public void enableAllOutputs() {
+        for (SubExpression expression : expressions) {
+            expression.enabled = true;
+        }
     }
 
     /**
@@ -319,17 +499,10 @@ public class Evald {
      * List all variables currently in use by this instance's expression (including undefined variables, if permitted by {@link #setAllowUndeclared(boolean)}).
      */
     public String[] listActiveVariables() {
-        if (root == null || usedIndices.isEmpty())
+        if (expressions.isEmpty() || usedIndices.isEmpty())
             return new String[] {};
         
-        List<String> result = new ArrayList<String>();
-        
-        for(Map.Entry<String,Integer> entry : keyIndexMap.entrySet()) {
-            if (usedIndices.contains(entry.getValue()))
-                result.add(entry.getKey());
-        }
-
-        return result.toArray(new String[] {});
+        return tokensFromIndices(usedIndices);
     }
 
     /**
@@ -473,7 +646,28 @@ public class Evald {
      * @return a multiline string containing the final optimised expression tree.
      */
     public String toTree() {
-        return root.toTree("");
+        StringBuilder result = new StringBuilder();
+        for(SubExpression expression : expressions) {
+            if (!expression.enabled) {
+                continue;
+            }
+            result.append(variableToken[expression.outputVariableIndex]);
+            result.append(" = ");
+            result.append(expression.expressionRoot.toTree(""));
+        }
+        return result.toString();
+    }
+
+    /** For tests only */
+    String executionSequence() {
+        StringBuilder result = new StringBuilder();
+        for (SubExpression expression : expressions) {
+            if (!expression.enabled) {
+                continue;
+            }
+            result.append(variableToken[expression.outputVariableIndex]);
+        }
+        return result.toString();
     }
 
     public void remove(Parser... parsers) {
@@ -491,10 +685,25 @@ public class Evald {
     }
 
     void addUsedIndex(int variableIndex) {
+        if (usedIndices.contains(variableIndex)) {
+            return;
+        }
+        inputSet.add(variableIndex);
         usedIndices.add(variableIndex);
     }
 
     void addUsedFunction(String functionName) {
         usedFunctions.add(functionName);
+    }
+
+    public String getDefaultResultToken() {
+        return resultVariable;
+    }
+
+    public void setDefaultResultToken(String defaultToken) {
+        if (!validToken(defaultToken)) {
+            throw new InvalidTokenEvaldException(defaultToken);
+        }
+        resultVariable = defaultToken;
     }
 }

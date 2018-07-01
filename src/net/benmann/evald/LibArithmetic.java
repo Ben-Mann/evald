@@ -3,6 +3,8 @@ package net.benmann.evald;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import net.benmann.evald.AbstractEvaldException.EvaldException;
+
 /**
  * Arithmetic library.
  * 

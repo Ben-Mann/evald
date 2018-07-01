@@ -1,12 +1,12 @@
 package net.benmann.evald;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.fail;
-import net.benmann.evald.ArgFunction.OneArgFunction;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 import org.junit.Test;
+
+import net.benmann.evald.AbstractEvaldException.EvaldException;
+import net.benmann.evald.ArgFunction.OneArgFunction;
 
 public class PackageTests {
     static final double DEFAULT_PRECISION = 0.00001;
@@ -134,5 +134,29 @@ public class PackageTests {
         evald.parse("foo * foobar(3) * 5 ping 6 pingpong 7");
         evald.addVariable("foo", 100.0);
         assertEquals(100.0 * ((100 * 2 * 3 * 5) - (6 + 7)), evald.evaluate(), DEFAULT_PRECISION);
+    }
+    
+    
+    @Test public void testMultipleExpressionDependencies() {
+        String expression = 
+                  "x = (a + b + a * b) / (a + 2 * b) / b;\n"
+                + "y = (a + 2 * b) / (a + b + a * b) / a;"
+                + "out1 = 2 * x * y;"
+                + "out2 = 2 / x / y;";
+        Evald evald = new Evald();
+        evald.parse(expression);
+        assertEquals("xyout1out2", evald.executionSequence());
+        evald.enableAllOutputs();
+        assertEquals("xyout1out2", evald.executionSequence());
+        evald.enableOutputs("x");
+        assertEquals("x", evald.executionSequence());
+        evald.enableOutputs("y");
+        assertEquals("y", evald.executionSequence());
+        evald.enableOutputs("out1");
+        assertEquals("xyout1", evald.executionSequence());
+        evald.enableOutputs("out2");
+        assertEquals("xyout2", evald.executionSequence());
+        evald.enableAllOutputs();
+        assertEquals("xyout1out2", evald.executionSequence());
     }
 }

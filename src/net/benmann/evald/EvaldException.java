@@ -11,7 +11,7 @@ import java.util.Collection;
     EvaldException(String arg) {
 		super(arg);
 	}
-	
+
     /**
      * Thrown when an undeclared variable was found in an expression, and undeclared variables
      * were not allowed (with Expression.setAllowUndeclared).
@@ -27,6 +27,10 @@ import java.util.Collection;
 		UndeclaredVariableEvaldException(Collection<String> undeclared) {
 			super("There are " + undeclared.size() + " undeclared variables." + toList(undeclared));
 		}
+
+        UndeclaredVariableEvaldException(String token) {
+            super("The specified token " + token + " was not declared in this expression.");
+        }
 	}
 	
     /**
@@ -63,6 +67,15 @@ import java.util.Collection;
     static public class InvalidTokenEvaldException extends EvaldException {
         InvalidTokenEvaldException(String token) {
             super("The token " + token + " is invalid. Tokens must start with a letter or underscore, and may only contain underscores or alphanumeric characters.");
+        }
+    }
+
+    /**
+     * Thrown when a component is uninitialised
+     */
+    static public class UninitialisedEvaldException extends EvaldException {
+        UninitialisedEvaldException(String message) {
+            super(message);
         }
     }
 }

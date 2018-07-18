@@ -879,6 +879,7 @@ public class PublicAPITests {
 
     @Test public void testListActiveVariables() {
         Evald evald = new Evald();
+        assertEquals(0, evald.listActiveVariables().length);
         evald.addVariable("a", 1);
         evald.addVariable("b", 2);
         evald.parse("a + b + c");
@@ -901,5 +902,38 @@ public class PublicAPITests {
         assertEquals(-1 - 2, evald.evaluate(), DEFAULT_PRECISION);
         evald.parse("0-a");
         assertEquals(0 - 2, evald.evaluate(), DEFAULT_PRECISION);
+    }
+    
+    @Test public void testNullVariable() {
+    	Evald evald = new Evald();
+    	int ia = evald.addVariable("a");
+    	int ib = evald.addVariable("b");
+        try {
+            evald.setVariable(ia, (int) 1);
+            fail();
+        } catch (NullPointerException e) {
+            //Okay - because we've not parsed an expression yet.  
+        }
+        evald.parse("a*2");
+        evald.setVariable(ia, (int) 1);
+    	evald.setVariable(ib, 2.0f);
+    	evald.parse("a*b");
+    	assertNotEquals(2, evald.evaluate(), DEFAULT_PRECISION);
+    }
+
+    @Test public void testRemoveConstant() {
+        Evald evald = new Evald();
+        evald.addLibrary(Library.MATH);
+        evald.parse("nan");
+        assertTrue(Double.isNaN(evald.evaluate()));
+        evald.addVariable("nan", 1);
+        evald.parse("nan");
+        assertNotEquals(1, evald.evaluate(), DEFAULT_PRECISION);
+        evald.removeConstant(null); //Okay, but meaningless
+        evald.removeConstant(""); //Okay, but meaningless
+        evald.removeConstant("irrelevant");
+        evald.removeConstant("nan");
+        evald.parse("nan");
+        assertEquals(1, evald.evaluate(), DEFAULT_PRECISION);
     }
 }

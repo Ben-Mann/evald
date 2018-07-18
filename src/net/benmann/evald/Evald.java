@@ -106,8 +106,6 @@ public class Evald {
         valueArray = new double[valueList.size()];
         //transfer values
         for (int i = 0; i < valueList.size(); i++) {
-            if (valueList.get(i) == null)
-                continue;
             valueArray[i] = valueList.get(i);
         }
         for (SetValueArrayCallback callback : valueArrayCallbacks) {
@@ -225,6 +223,8 @@ public class Evald {
      *            the value to which the variable should be set.
      * @throws IndexOutOfBoundsException
      *             if the index was not obtained from {@link #addVariable}
+     * @throws NullPointerException
+     *             if the parser has not yet been run, and the indexed value cache index is therefore unavailable.             
      */
     public void setVariable(int index, double value) {
         valueArray[index] = value;
@@ -241,6 +241,8 @@ public class Evald {
      *            the value to which the variable should be set.
      * @throws IndexOutOfBoundsException
      *             if the index was not obtained from {@link #addVariable}
+     * @throws NullPointerException
+     *             if the parser has not yet been run, and the indexed value cache index is therefore unavailable.             
      */
     public void setVariable(int index, float value) {
         valueArray[index] = (double) value;
@@ -257,6 +259,8 @@ public class Evald {
      *            the value to which the variable should be set.
      * @throws IndexOutOfBoundsException
      *             if the index was not obtained from {@link #addVariable}
+     * @throws NullPointerException
+     *             if the parser has not yet been run, and the indexed value cache index is therefore unavailable.             
      */
     public void setVariable(int index, int value) {
         valueArray[index] = (double) value;

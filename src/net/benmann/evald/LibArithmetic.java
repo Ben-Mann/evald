@@ -135,7 +135,7 @@ public final class LibArithmetic extends Library {
                     Node variableNode = a.isConstant ? b : a;
 
                     double value = constantNode.get();
-                    if (value == 0)
+                    if (value == 0 && !a.isConstant)
                         return variableNode;
 
                     return this;

@@ -1,16 +1,14 @@
 package net.benmann.evald.test;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertThat;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.CoreMatchers.*;
+import static org.junit.Assert.*;
 
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.hamcrest.CoreMatchers;
+import org.junit.Test;
 
 import net.benmann.evald.ArgFunction.ImpureNArgFunction;
 import net.benmann.evald.ArgFunction.NArgFunction;
@@ -23,9 +21,6 @@ import net.benmann.evald.EvaldException.OperatorExpectedEvaldException;
 import net.benmann.evald.EvaldException.UndeclaredVariableEvaldException;
 import net.benmann.evald.EvaldException.UnknownMethodEvaldException;
 import net.benmann.evald.Library;
-
-import org.hamcrest.CoreMatchers;
-import org.junit.Test;
 
 public class PublicAPITests {
     static final double DEFAULT_PRECISION = 0.00001;
@@ -144,6 +139,69 @@ public class PublicAPITests {
         }
     }
 
+    @Test public void testPrecedence2() {
+        Evald evald = new Evald(Library.CORE, Library.LOGIC, Library.MATH);
+        evald.addVariable("v", 5);
+        evald.parse("-v^2");
+        assertEquals(-Math.pow(5, 2), evald.evaluate(), DEFAULT_PRECISION);
+
+    }
+
+    static public class Rint extends OneArgFunction {
+        public Rint() {
+            super("rint");
+        }
+
+        @Override public double get(double a) {
+            return (double) Math.rint(a);
+        }
+    }
+    @Test public void testExtra2() {
+        Evald evald = new Evald(Library.CORE, Library.LOGIC, Library.MATH);
+        evald.addUserFunction(new Rint());
+        double offset = -287.72079288140884;
+        double swdep = 486.2106094079397;
+        evald.addVariable("offset", offset);
+        evald.addVariable("swdep", swdep);
+        evald.parse("rint(offset)+4");
+        System.err.println(evald.toTree());
+        System.err.println(evald.evaluate());
+        evald.parse("rint(offset)+4");
+        System.err.println(evald.toTree());
+        System.err.println(evald.evaluate());
+        evald.parse("rint((1000.0/2500)*offset)");
+        System.err.println(evald.evaluate());
+        evald.parse("rint((1000.0/2500)*offset)");
+        System.err.println(evald.evaluate());
+        evald.parse("rint((1000.0/2500)*offset)+4");
+        System.err.println(evald.evaluate());
+        evald.parse("rint((1000.0/2500)*offset)+4");
+        System.err.println(evald.evaluate());
+        evald.parse("rint((1000.0/2500)*offset)+4+15");
+        System.err.println(evald.evaluate());
+        evald.parse("rint((1000.0/2500)*offset)+4+15");
+        System.err.println(evald.evaluate());
+        evald.parse("rint((1000.0/2500)*offset)+rint(1400.0*(swdep/100.0)/1535.0)+15");
+        System.err.println(evald.evaluate());
+        assertEquals(Math.rint((1000.0 / 2500) * offset) + Math.rint(1400.0 * (swdep / 100.0) / 1535.0) + 15, evald.evaluate(), DEFAULT_PRECISION);
+    }
+
+    @Test public void testExtra() {
+        Evald evald = new Evald(Library.CORE, Library.LOGIC, Library.MATH);
+        double v1 = Double.POSITIVE_INFINITY;
+        evald.addVariable("v1", v1);
+        evald.addVariable("v2", 1);
+        double twt_ms = 461.5381100190259;
+        double h1 = -198.20700211614127;
+        double h2 = 1.7976931348623157E308;
+        evald.addVariable("h1", h1);
+        evald.addVariable("twt_ms", twt_ms);
+        evald.addVariable("h2", h2);
+        evald.parse("v1 + v1 * 0.75 * exp(-(twt_ms-((h1+h2)/2))^2/(2*75^2))");
+        System.err.println(" = " + evald.evaluate());
+        System.err.println("(-(twt_ms-((h1+h2)/2))^2/(2*75^2)) = " + (v1 + v1 * 0.75 * Math.exp(-Math.pow((twt_ms - ((h1 + h2) / 2)), 2) / (Math.pow(2 * 75, 2)))));
+    }
+    
     @Test public void testSpaceAfterFunctionName() {
         Evald evald = new Evald(Library.CORE, Library.LOGIC, Library.MATH);
         evald.parse("if ( isnan ( v1 ) , v2 , nan )");
@@ -801,6 +859,24 @@ public class PublicAPITests {
         assertTrue(vars.contains("d"));
     }
 
+    @Test public void testListAllFunctions() {
+        Evald evald = new Evald(Library.MATH, Library.LOGIC, Library.CORE);
+        evald.parse("a % b");
+        assertArrayEquals(evald.listActiveFunctions());
+        evald.parse("a + sin(b)");
+        assertArrayEquals(evald.listActiveFunctions(), "sin");
+        evald.parse("cos(a) + sin(isnan(b))");
+        assertArrayEquals(evald.listActiveFunctions(), "sin", "cos", "isnan");
+    }
+
+    /** list must contain exactly the listed strings, in any order */
+    private void assertArrayEquals(String[] actualArray, String... expectedArray) {
+        Set<String> actualSet = new HashSet(Arrays.asList(actualArray));
+        Set<String> expectedSet = new HashSet(Arrays.asList(expectedArray));
+        assertTrue("Expected {" + Arrays.toString(expectedArray) + "} but got {" + Arrays.toString(actualArray) + "}",
+                   actualSet.containsAll(expectedSet) && expectedSet.containsAll(actualSet));
+    }
+
     @Test public void testListActiveVariables() {
         Evald evald = new Evald();
         evald.addVariable("a", 1);
@@ -812,5 +888,18 @@ public class PublicAPITests {
         assertTrue(vars.contains("b"));
         assertTrue(vars.contains("c"));
         assertFalse(vars.contains("d"));
+    }
+
+    @Test public void testSubtraction() {
+        Evald evald = new Evald();
+        evald.addVariable("a", 2);
+        evald.parse("-a");
+        assertEquals(-2, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("1-a");
+        assertEquals(1 - 2, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("-1-a");
+        assertEquals(-1 - 2, evald.evaluate(), DEFAULT_PRECISION);
+        evald.parse("0-a");
+        assertEquals(0 - 2, evald.evaluate(), DEFAULT_PRECISION);
     }
 }

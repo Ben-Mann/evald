@@ -1,6 +1,7 @@
 package net.benmann.evald;
 
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 
 public final class LibMath extends Library {
     @Override Parser[] getParsers() {
@@ -156,7 +157,7 @@ public final class LibMath extends Library {
         @Override protected ValueNode fn(List<Node> args) {
             return new ZeroArgValueNode(token, false) {
                 @Override protected double get() {
-                    return Math.random();
+                    return ThreadLocalRandom.current().nextDouble();
                 }
             };
         }

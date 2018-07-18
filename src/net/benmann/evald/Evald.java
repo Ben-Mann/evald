@@ -29,8 +29,9 @@ public class Evald {
 
     final Map<String, Integer> keyIndexMap = new HashMap<String, Integer>();
     final Set<String> undeclaredKeyMap = new HashSet<String>();
-    final List<SetValueArrayCallback> valueArrayCallbacks = new ArrayList<SetValueArrayCallback>();
-    final Set<Integer> usedIndices = new HashSet<Integer>();
+    private final List<SetValueArrayCallback> valueArrayCallbacks = new ArrayList<SetValueArrayCallback>();
+    private final Set<Integer> usedIndices = new HashSet<Integer>();
+    private final Set<String> usedFunctions = new HashSet<String>();
 
     ParserList<ValueParser> valueParsers = new ParserList<ValueParser>();
     ParserList<BinaryOperatorParser> binaryOperatorParsers = new ParserList<BinaryOperatorParser>();
@@ -94,6 +95,7 @@ public class Evald {
     public void parse(String expression) {
         valueArrayCallbacks.clear();
         usedIndices.clear();
+        usedFunctions.clear();
         
         ExpressionString string = new ExpressionString(expression);
         if (string.expression.isEmpty())
@@ -303,6 +305,13 @@ public class Evald {
     }
 
     /**
+     * List all functions currently in use by this instance's expression.
+     */
+    public String[] listActiveFunctions() {
+        return usedFunctions.toArray(new String[] {});
+    }
+
+    /** 
      * List all variables currently in use by this instance's expression (including undefined variables, if permitted by {@link #setAllowUndeclared(boolean)}).
      */
     public String[] listActiveVariables() {
@@ -479,5 +488,9 @@ public class Evald {
 
     void addUsedIndex(int variableIndex) {
         usedIndices.add(variableIndex);
+    }
+
+    void addUsedFunction(String functionName) {
+        usedFunctions.add(functionName);
     }
 }
